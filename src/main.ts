@@ -1,10 +1,27 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import mongoose from 'mongoose';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: false, // don't convert types
+      // whitelist: true,  // remove extra fields not in DTO
+      // forbidNonWhitelisted: true, // throw error on extra fields
+    }),
+  );
+  
+  // ✅ Get ConfigService from the app
+  const configService = app.get(ConfigService);
+
+  await app.listen(configService.get<string>('PORT') ?? 3000);
     // Log successful MongoDB connection
   mongoose.connection.once('open', () => {
     console.log('✅ Connected to MongoDB');
@@ -14,6 +31,8 @@ async function bootstrap() {
   mongoose.connection.on('error', (err) => {
     console.error('❌ MongoDB connection error:', err);
   });
+
+  console.log(`🚀 Running in ${process.env.NODE_ENV} mode ...!`);
 
 }
 bootstrap();

@@ -4,10 +4,18 @@ import { AppService } from './app.service';
 import { VehicleModule } from './modules/vehicles/vehicles.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { UsersModule } from './modules/users/users.module';
+import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // loads `.env` file globally
+    ConfigModule.forRoot({ 
+      isGlobal: true,
+      envFilePath: [
+      `.env.${process.env.NODE_ENV}`, // first priority
+      '.env'                          // fallback
+    ],
+     }), // loads `.env` file globally
     
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -19,6 +27,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     }),
 
     VehicleModule,
+    UsersModule,
+    WhatsappModule
   ],
   controllers: [AppController],
   providers: [AppService],
