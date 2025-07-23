@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { timeStamp } from '../utils/time.util';
 
 export interface StandardResponse<T = any> {
@@ -6,7 +7,10 @@ export interface StandardResponse<T = any> {
   statusCode: number;
   data?: T;
   error?: any;
+  apiName?: string;
 }
+
+const logger = new Logger('StandardResponse');
 
 export function standardResponse<T = any>(
   success: boolean,
@@ -14,22 +18,21 @@ export function standardResponse<T = any>(
   statusCode: number,
   data?: T,
   error?: any,
+  apiName?: string,
 ): StandardResponse<T> {
   const response: StandardResponse<T> = {
     success,
     message,
     statusCode,
   };
-  console.log(
-    `Time UTC:⏳ ${timeStamp()}, Status: ${statusCode}, Message: ${message}`,
-);
+  logger.log(`API: ${apiName}, Status: ${statusCode}, Message: ${message}`);
 
   if (data) {
-    console.log(`Response data:✅ ${JSON.stringify(data)}`);
+    logger.log(`Response data:✅  ${JSON.stringify(data)}`);
     response.data = data;
   }
   if (error) {
-    console.log(`Error:❌ ${error}`);
+    logger.error(`Error:❌ ${error}`);
     response.error = error?.message;
   }
 

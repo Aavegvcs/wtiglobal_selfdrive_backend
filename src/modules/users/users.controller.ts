@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { CreateUserDto, LoginDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import { UserService } from './users.service';
 import { isValidObjectId } from 'mongoose';
 

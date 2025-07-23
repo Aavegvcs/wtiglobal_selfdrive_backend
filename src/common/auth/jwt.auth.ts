@@ -1,5 +1,5 @@
 // jwt.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 
@@ -12,18 +12,19 @@ export interface TokenPayload {
   countryName: string;
 }
 
+const logger = new Logger('jwtAuth');
 
 export const generateAccessToken = async (payload: TokenPayload, configService: ConfigService): Promise<string> => {
 
   const token = jwt.sign(payload, configService.get<string>('JWT_ACCESS_SECRET'), { expiresIn: '1d' });
-  console.log('Access Token:', token);
+  logger.log('Access Token:', token);
   return token;
 };
 
 export const generateRefreshToken = async (payload: TokenPayload, configService: ConfigService): Promise<string> => {
 
   const token = jwt.sign(payload, configService.get<string>('JWT_REFRESH_SECRET'), { expiresIn: '30d' });
-  console.log('Refresh Token:', token);
+  logger.log('Refresh Token:', token);
   return token;
 };
 

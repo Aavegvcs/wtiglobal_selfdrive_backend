@@ -4,11 +4,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/user.schema';
 import { UserController } from './users.controller';
 import { WhatsappModule } from '../whatsapp/whatsapp.module';
+import { MailModule } from '../mails/mail.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
-    WhatsappModule
+    WhatsappModule,
+    MailModule
   ],
   controllers: [UserController],
   providers: [UserService],

@@ -40,6 +40,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status,
       undefined,
       errorMessage,
+      "Coming from - Exception Handler"
     );
 
     response.status(status).json(formatted);

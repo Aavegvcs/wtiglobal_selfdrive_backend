@@ -3,8 +3,7 @@ import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import {
   Injectable,
-  InternalServerErrorException,
-  NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { CreateUserDto, LoginDto } from './dto/create-user.dto';
 import { standardResponse } from 'src/common/helpers/response.helper';
@@ -13,6 +12,9 @@ import { timeStamp } from 'src/common/utils/time.util';
 import { generateAccessToken, generateRefreshToken, TokenPayload } from 'src/common/auth/jwt.auth';
 import { ConfigService } from '@nestjs/config';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
+import { MailService } from '../mails/mail.service';
+
+const logger = new Logger("UserService");
 
 @Injectable()
 export class UserService {
@@ -20,7 +22,8 @@ export class UserService {
     @InjectModel(User.name) // ← this injects the Mongoose model
     private userModel: Model<UserDocument>,
     private readonly configService: ConfigService,
-    private readonly whatsappService: WhatsappService
+    private readonly whatsappService: WhatsappService,
+    private readonly mailService: MailService,
   ) {}
 
   async getUser(id: string): Promise<any> {
@@ -32,12 +35,16 @@ export class UserService {
           {
             data: null,
           },
+          null,
+          "/user/getUser"
         );
       }
       return standardResponse(true, 'User found', 200,
         {
           data: userData
         },
+        null,
+        "/user/getUser"
       );
     } catch (error: any) {
       return standardResponse(false, 'Internal Server Error', 500,
@@ -45,6 +52,7 @@ export class UserService {
           data: null,
         },
         error,
+        "/user/getUser"
       );
     }
   }
@@ -73,7 +81,9 @@ export class UserService {
           // gender: existingUser.gender,
           // contactCode: existingUser.contactCode,
           country: existingUser.countryName,
-        });
+        },
+        null,
+        "/user/createUser");
       }
 
       const userID = `US${Date.now()}`;
@@ -113,7 +123,10 @@ export class UserService {
         // gender: existingUser.gender,
         // contactCode: existingUser.contactCode,
         country: createUserDto.countryName,
-      });
+        },
+        null,
+        "/user/createUser"
+      );
     } catch (error: any) {
       return standardResponse(false, 'Internal Server Error', 500,
         {
@@ -121,6 +134,7 @@ export class UserService {
           userExist: false,
         },
         error,
+        "/user/createUser"
       );
     }
   }
@@ -128,7 +142,7 @@ export class UserService {
   async loginUser(userCred: string) {
     
     try {
-    console.log("loginUser - Req.payload", userCred)
+    logger.log("loginUser - Req.payload", userCred)
     const query = {
       $or: [{ contact: userCred }, { emailID: userCred }],
     };
@@ -140,6 +154,8 @@ export class UserService {
           isWhatsappOtpSent: false,
           mailSent: false,
         },
+        null,
+        "/user/loginUser"
       );
     }
 
@@ -155,25 +171,40 @@ export class UserService {
 
       await this.userModel.findOneAndUpdate(query, docToUpdate);
 
-      console.log(
+      logger.log(
         timeStamp(),
         `- loginUser - user exists and OTP updated`,
         userCred,
       );
 
+        // whatsapp otp
         const isWhatsappOtpSent = await this.whatsappService.sendOtpOnWhatsapp(
-          `${findCred.contactCode}${findCred.contact}`,
+          `${findCred.contactCode || '' }${findCred.contact}`,
           otp,
         );
 
-        // const emailSent = await this.sendOtpToMail(findCred.emailID, findCred.firstName, otp);
+        // email otp
+        const emailSent = await this.mailService.sendOtpToMail(findCred.emailID, findCred.firstName, otp);
 
-        return standardResponse(true, 'OTP sent to Email and Whatsapp.', 200,
-            {
-                isWhatsappOtpSent: isWhatsappOtpSent.success,
-                mailSent: 'emailSent',
-            },
-        );
+        if(isWhatsappOtpSent.success || emailSent){
+          return standardResponse(true, 'OTP sent to Email/Whatsapp.', 200,
+              {
+                  isWhatsappOtpSent: isWhatsappOtpSent.success,
+                  mailSent: emailSent,
+              },
+              null,
+              "/user/loginUser"
+          );
+        } else {
+          return standardResponse(false, 'Error sending Otp to Email and Whatsapp.', 500,
+              {
+                  isWhatsappOtpSent: isWhatsappOtpSent.success,
+                  mailSent: emailSent,
+              },
+              null,
+              "/user/loginUser"
+          );
+        }
         
     } catch (error:any) {
       return standardResponse(false, 'Internal Server Error', 500,
@@ -181,7 +212,8 @@ export class UserService {
           isWhatsappOtpSent: false,
           mailSent: false
         },
-        error
+        error,
+        "/user/loginUser"
       );
     }
   }
@@ -190,7 +222,7 @@ export class UserService {
   try {
     const {userCred, otp} = loginData;
 
-    console.log("verifyLoginOtp - Req.payload", userCred, otp)
+    logger.log("verifyLoginOtp - Req.payload", userCred, otp)
     const query = {
       $or: [{ contact: userCred }, { emailID: userCred }],
     };
@@ -198,17 +230,17 @@ export class UserService {
     const user = await this.userModel.findOne(query);
 
     if (!user) {
-      return standardResponse(false, "User doesn't exist", 404);
+      return standardResponse(false, "User doesn't exist", 404, null, null, "/user/verifyLoginOtp");
     }
 
     const currentTime = new Date();
 
     if (!user.otp.otpExpiry || currentTime > user.otp.otpExpiry) {
-      return standardResponse(false, 'OTP expired, request a new OTP', 401);
+      return standardResponse(false, 'OTP expired, request a new OTP', 401, null, null, "/user/verifyLoginOtp");
     }
 
     if (Number(otp) !== user.otp.code || user.otp.code === null) {
-      return standardResponse(false, 'Incorrect OTP', 401);
+      return standardResponse(false, 'Incorrect OTP', 401, null, null, "/user/verifyLoginOtp");
     }
 
     const payload : TokenPayload = {
@@ -233,9 +265,12 @@ export class UserService {
     return standardResponse(true, 'Login Success', 200, {
       accessToken,
       refreshToken,
-    });
+    }, 
+    null,
+    "/user/verifyLoginOtp"
+    );
   } catch (error) {
-    return standardResponse(false, 'Internal Server Error', 500, null, error);
+    return standardResponse(false, 'Internal Server Error', 500, null, error, "/user/verifyLoginOtp");
   }
   }
 

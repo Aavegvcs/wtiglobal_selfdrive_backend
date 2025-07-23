@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { ConfigService } from '@nestjs/config';
+
+const logger = new Logger('WhatsappService');
 
 @Injectable()
 export class WhatsappService {
@@ -31,6 +33,8 @@ async sendOtpOnWhatsapp(recipient: string, otp: number) {
 
     const url = `https://api.versal.one/${this.clientId}`;
 
+    console.log('this.clientSecret', this.clientSecret)
+    console.log('this.clientId', this.clientId)
     await firstValueFrom(
         this.httpService.post(url, sendData, {
         headers: {
@@ -40,16 +44,16 @@ async sendOtpOnWhatsapp(recipient: string, otp: number) {
         }),
     );
 
-    console.log('Whatsapp OTP sent successfully');
+    logger.log('Whatsapp OTP sent successfully');
     return {
         message: 'OTP sent successfully',
         success: true,
     };
     } catch (error) {
-    console.error('Error from WhatsApp:', error?.message || error);
+    logger.error('Error from WhatsApp:', error.stack);
     return {
         success: false,
-        message: error?.message || 'Failed to send OTP',
+        message: error?.message || 'Failed to send whatsapp OTP',
     };
     }
 }
