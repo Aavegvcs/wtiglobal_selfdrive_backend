@@ -6,6 +6,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from './modules/users/users.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
+import { SearchLocationModule } from './modules/search-locations/search-locations.module';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 
     VehicleModule,
     UsersModule,
-    WhatsappModule
+    WhatsappModule,
+    SearchLocationModule
   ],
   controllers: [AppController],
   providers: [AppService],

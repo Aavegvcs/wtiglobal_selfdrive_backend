@@ -21,6 +21,9 @@ async function bootstrap() {
   // ✅ Get ConfigService from the app
   const configService = app.get(ConfigService);
 
+  // ✅ Set global prefix here
+  app.setGlobalPrefix('/selfdrive/v1');
+
   await app.listen(configService.get<string>('PORT') ?? 3000);
     // Log successful MongoDB connection
   mongoose.connection.once('open', () => {
