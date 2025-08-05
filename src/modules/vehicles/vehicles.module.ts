@@ -12,6 +12,6 @@ import { VehicleController } from './vehicles.controller';
   ],
   controllers: [VehicleController], //routing
   providers: [VehicleService], //for business logic
-  exports: [VehicleService], // Exporting the service for use in other modules
+  // exports: [VehicleService], // Exporting the service for use in other modules
 })
 export class VehicleModule {}
