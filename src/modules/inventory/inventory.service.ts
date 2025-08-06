@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Pricing, PricingDocument } from '../pricing/schema/pricing.schema';
 import { SearchPricingDto } from './dto/search-all-inventory.dto';
 import { standardResponse } from 'src/common/helpers/response.helper';
+import { SearchSinglePricingDto } from './dto/search-single-inventory.dto';
 
 @Injectable()
 export class InventoryService {
@@ -84,35 +85,21 @@ export class InventoryService {
         total_security_deposit: item.total_security_deposit,
       };
 
-      
 
       if (durationDays < 7) {
         const dailyRate = (dailyPlan.base || 0) * durationDays;
         inventoryMapping.searchedPlan = "daily";
         inventoryMapping.finalPrice = dailyRate;
-        // inventoryMapping.tariff_daily = {
-        //   base: dailyRate,
-        //   mileage_limit: dailyPlan.mileage_limit || 0,
-        //   is_mileage_unlimited: dailyPlan.is_mileage_unlimited || false,
-        //   partial_security_deposit: dailyPlan.partial_security_deposit || 0,
-        //   hikePercentage: dailyPlan.hikePercentage || 0
-        // };
         
       } else if (durationDays >= 7 && durationDays < 30) {
         const weeklyRatePerDay = (weeklyPlan.base || 0) / 7;
         const weeklyRate = weeklyRatePerDay * durationDays;
         inventoryMapping.searchedPlan = "weekly";
         inventoryMapping.finalPrice = weeklyRate;
-        // inventoryMapping.tariff_weekly = {
-        //   base: weeklyRate,
-        //   mileage_limit: weeklyPlan.mileage_limit || 0,
-        //   is_mileage_unlimited: weeklyPlan.is_mileage_unlimited || false,
-        //   partial_security_deposit: weeklyPlan.partial_security_deposit || 0,
-        //   hikePercentage: weeklyPlan.hikePercentage || 0
-        // };
+    
       } else if ((durationDays >= 30) || monthlyPlan) {
         let plan: any = {};
-        if(durationDays<90 || monthlyPlan?.duration == 1){
+        if(durationDays<90 || duration_months == 1){
           plan = item.tariff_monthly?.find((plan) => plan.duration === 1);
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
@@ -125,7 +112,7 @@ export class InventoryService {
           inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
           inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
 
-        }else if(durationDays<180 || monthlyPlan?.duration == 3){
+        }else if(durationDays<180 || duration_months == 3){
           plan = item.tariff_monthly?.find((plan) => plan.duration === 3)
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
@@ -139,7 +126,7 @@ export class InventoryService {
           inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
           
 
-        }else if(durationDays<270 || monthlyPlan?.duration == 6){
+        }else if(durationDays<270 || duration_months == 6){
           plan = item.tariff_monthly?.find((plan) => plan.duration === 6)
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
@@ -152,7 +139,7 @@ export class InventoryService {
           inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
           inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
 
-        }else{
+        }else if(durationDays>=270 || duration_months == 9){
           plan = item.tariff_monthly?.find((plan) => plan.duration === 9)
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
@@ -242,154 +229,207 @@ async getAllInventoryByCountry(country_id: String): Promise<any> {
 }
 
 
-  // async getAllInventoryWithPricing(dto: SearchPricingDto): Promise<any> {
-  //   try {
+  async getSingleInventoryWithPricing(dto: SearchSinglePricingDto): Promise<any> {
+  try {
+    const { vehicle_id, pickup_date, drop_date, plan_type, duration_months } = dto;
+    
+    let durationDays = 0;
+    if (plan_type === 'daily' || plan_type === 'weekly') {
+      const pickup = new Date(pickup_date);
+      const drop = new Date(drop_date);
+      const diffTime = Math.abs(drop.getTime() - pickup.getTime());
+      durationDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
+    } else if (plan_type === 'monthly') {
+      durationDays = duration_months * 30;
+    }
+    // console.log(durationDays);
+    const inventory = await this.pricingModel.find({
+      vehicle_id,
+      isActive: true,
+    }).populate('vehicle_id');
+
+    if (!inventory || inventory.length === 0) {
+      return standardResponse(
+        true,
+        'no inventory exists',
+        400,
+        { data: [] },
+        null,
+        '/inventory/getAllInventoriesWithPricing',
+      );
+    }
+
+
+      const dailyPlan = inventory[0].tariff_daily || {};
+      const weeklyPlan = inventory[0].tariff_weekly || {};
+      const monthlyPlan = inventory[0].tariff_monthly?.find((plan) => plan.duration === 1);
+
+      let inventoryMapping : any = {
+        vehicle_details: inventory[0].vehicle_id,
+        searchedPlan:plan_type,
+        rentalDays:durationDays,
+        finalPrice:0,
+        tariff_daily: {
+          pickup_date:pickup_date,
+          drop_date:drop_date,
+          base: dailyPlan?.base,
+          mileage_limit: dailyPlan?.mileage_limit,
+          is_mileage_unlimited: dailyPlan?.is_mileage_unlimited,
+          partial_security_deposit: dailyPlan?.partial_security_deposit,
+          hikePercentage: dailyPlan?.hikePercentage,
+        },
+        tariff_weekly: {
+          pickup_date:pickup_date,
+          drop_date:drop_date,
+          base: weeklyPlan?.base,
+          mileage_limit: weeklyPlan?.mileage_limit,
+          is_mileage_unlimited: weeklyPlan?.is_mileage_unlimited,
+          partial_security_deposit: weeklyPlan?.partial_security_deposit,
+          hikePercentage: weeklyPlan?.hikePercentage,
+        },
+        tariff_monthly: {
+          pickup_date:pickup_date,
+          drop_date:drop_date,
+          duration: monthlyPlan?.duration,
+          base: monthlyPlan?.base,
+          mileage_limit: monthlyPlan?.mileage_limit,
+          is_mileage_unlimited: monthlyPlan?.is_mileage_unlimited,
+          partial_security_deposit: monthlyPlan?.partial_security_deposit,
+          hikePercentage: monthlyPlan?.hikePercentage,
+        },
+        minimumRentalDays: inventory[0].minimumRentalDays,
+        currency: inventory[0].currency,
+        discount_percentage: inventory[0].discount_percentage,
+        overrun_cost_per_km: inventory[0].overrun_cost_per_km,
+        insurance_charge: inventory[0].insurance_charge,
+        total_security_deposit: inventory[0].total_security_deposit,
+      };
+
       
-  //   const { country_id, pickup_date, drop_date, plan_type, duration_months } = dto;
 
-  //   let durationDays = 0;
-  //   if(plan_type == 'daily' || plan_type == 'weekly'){
-  //     // durationDays = drop_date-pickup_date;
-  //   }else{
-  //     // durationDays = duration_months*30;
-  //   }
-  //   const inventory = await this.pricingModel.find({
-  //     country_id,
-  //     isActive: true,
-  //   });
+      if (durationDays < 7) {
+        const dailyRate = (dailyPlan.base || 0) * durationDays;
+        inventoryMapping.searchedPlan = "daily";
+        inventoryMapping.finalPrice = dailyRate;
+        
+        const weekDropDate = new Date(pickup_date);
+        weekDropDate.setUTCDate(weekDropDate.getUTCDate() + 7);
+
+        inventoryMapping.tariff_weekly.drop_date = weekDropDate.toISOString();
+
+        const monthDropDate = new Date(pickup_date);
+        monthDropDate.setUTCDate(monthDropDate.getUTCDate() + 30);
+
+        inventoryMapping.tariff_monthly.drop_date = monthDropDate.toISOString();
+        
+      } else if (durationDays >= 7 && durationDays < 30) {
+        const weeklyRatePerDay = (weeklyPlan.base || 0) / 7;
+        const weeklyRate = weeklyRatePerDay * durationDays;
+        inventoryMapping.searchedPlan = "weekly";
+        inventoryMapping.finalPrice = weeklyRate;
 
 
-  //   if(inventory){
+        const monthDropDate = new Date(pickup_date);
+        monthDropDate.setUTCDate(monthDropDate.getUTCDate() + 30);
+
+        inventoryMapping.tariff_monthly.drop_date = monthDropDate.toISOString();
+
+      } else if ((durationDays >= 30) || monthlyPlan) {
+        let plan: any = {};
+        if(durationDays<90 || duration_months == 1){
+          plan = inventory[0].tariff_monthly?.find((plan) => plan.duration === 1);
+          let monthlyRatePerDay = plan?.base/30;
+          let monthlyRate = monthlyRatePerDay * durationDays;
+          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.finalPrice = monthlyRate,
+          inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
+          inventoryMapping.tariff_monthly.base = plan.base,
+          inventoryMapping.tariff_monthly.mileage_limit =  plan?.mileage_limit || 0,
+          inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
+          inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
+          inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+
+        }else if(durationDays<180 || duration_months == 3){
+          plan = inventory[0].tariff_monthly?.find((plan) => plan.duration === 3)
+          let monthlyRatePerDay = plan?.base/30;
+          let monthlyRate = monthlyRatePerDay * durationDays;
+          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.finalPrice = monthlyRate,
+          inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
+          inventoryMapping.tariff_monthly.base = plan.base,
+          inventoryMapping.tariff_monthly.mileage_limit =  plan?.mileage_limit || 0,
+          inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
+          inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
+          inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+          
+
+        }else if(durationDays<270 || duration_months == 6){
+          plan = inventory[0].tariff_monthly?.find((plan) => plan.duration === 6)
+          let monthlyRatePerDay = plan?.base/30;
+          let monthlyRate = monthlyRatePerDay * durationDays;
+          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.finalPrice = monthlyRate,
+          inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
+          inventoryMapping.tariff_monthly.base = plan.base,
+          inventoryMapping.tariff_monthly.mileage_limit =  plan?.mileage_limit || 0,
+          inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
+          inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
+          inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+
+        }else if(durationDays>=270 || duration_months == 9){
+          plan = inventory[0].tariff_monthly?.find((plan) => plan.duration === 9)
+          let monthlyRatePerDay = plan?.base/30;
+          let monthlyRate = monthlyRatePerDay * durationDays;
+          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.finalPrice = monthlyRate,
+          inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
+          inventoryMapping.tariff_monthly.base = plan.base,
+          inventoryMapping.tariff_monthly.mileage_limit =  plan?.mileage_limit || 0,
+          inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
+          inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
+          inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+
+        }
+
+        const weekDropDate = new Date(pickup_date);
+        weekDropDate.setUTCDate(weekDropDate.getUTCDate() + 7);
+
+        inventoryMapping.tariff_weekly.drop_date = weekDropDate.toISOString();
+
+        const monthDropDate = new Date(pickup_date);
+        monthDropDate.setUTCDate(monthDropDate.getUTCDate() + durationDays);
+
+        inventoryMapping.tariff_monthly.drop_date = monthDropDate.toISOString();
+        
+      }
 
     
 
-  //   let inventories = [];
+    return standardResponse(
+      true,
+      'all inventories data fetched successfully',
+      200,
+      inventoryMapping,
+      null,
+      '/inventory/getAllInventoriesWithPricing',
+    );
 
-  //   await inventory.map((item) => {
-
-  //     let inventoryMapping = {
-  //     "vehicle_details":{},
-  //     "tariff_daily": {
-  //       "base": 0,
-  //       "mileage_limit": 0,
-  //       "is_mileage_unlimited": false,
-  //       "partial_security_deposit": 0,
-  //       "hikePercentage": 0
-  //     },
-  //     "tariff_weekly": {
-  //       "base": 0,
-  //       "mileage_limit": 0,
-  //       "is_mileage_unlimited": false,
-  //       "partial_security_deposit": 0,
-  //       "hikePercentage": 0
-  //     },
-  //     "tariff_monthly": {
-  //         "duration": 0,
-  //         "base": 0,
-  //         "mileage_limit": 0,
-  //         "is_mileage_unlimited": false,
-  //         "partial_security_deposit": 0,
-  //         "hikePercentage": 0
-  //     },
-  //     "minimumRentalDays": 0,
-  //     "currency": "",
-  //     "discount_percentage": 0,
-  //     "overrun_cost_per_km": 0,
-  //     "insurance_charge": 0,
-  //     "total_security_deposit": 0,
-  //   }
+    
 
 
-  //     const dailyBase = item.tariff_daily?.base || 0;
-  //     const weeklyBase = item.tariff_weekly?.base || 0;
-  //     const monthlyPlan = item.tariff_monthly?.find((plan) => plan.duration === duration_months);
-
-  //     const dailyPlan = item.tariff_daily;
-  //     const weeklyPlan = item.tariff_weekly;
-
-
-
-  //     let finalDailyRate = 0;
-  //     let finalWeeklyRate = 0;
-  //     let finalMonthlyRate = 0;
-
-  //     if(durationDays < 7 ){
-  //       finalDailyRate = dailyBase * durationDays;
-  //       inventoryMapping.tariff_daily.base = finalDailyRate;
-  //       inventoryMapping.tariff_daily.mileage_limit = dailyPlan.mileage_limit;
-  //       inventoryMapping.tariff_daily.is_mileage_unlimited = dailyPlan.is_mileage_unlimited;
-  //       inventoryMapping.tariff_daily.partial_security_deposit = dailyPlan.partial_security_deposit;
-  //       inventoryMapping.tariff_daily.hikePercentage = dailyPlan.hikePercentage;
-
-  //     }else if(durationDays >=7 && durationDays<30){
-  //       let weeklyRatePerDay = weeklyBase/7;
-  //       finalWeeklyRate = weeklyRatePerDay * durationDays;
-
-  //       inventoryMapping.tariff_weekly.base = finalWeeklyRate;
-  //       inventoryMapping.tariff_weekly.mileage_limit = weeklyPlan.mileage_limit;
-  //       inventoryMapping.tariff_weekly.is_mileage_unlimited = weeklyPlan.is_mileage_unlimited;
-  //       inventoryMapping.tariff_weekly.partial_security_deposit = weeklyPlan.partial_security_deposit;
-  //       inventoryMapping.tariff_weekly.hikePercentage = weeklyPlan.hikePercentage;
-
-
-  //     }else{
-  //       let monthlyRatePerDay = monthlyPlan/30;
-  //       finalMonthlyRate = monthlyRatePerDay * durationDays;
-  //       inventoryMapping.tariff_monthly.duration = monthlyPlan?.duration;
-  //       inventoryMapping.tariff_monthly.base = finalMonthlyRate;
-  //       inventoryMapping.tariff_monthly.mileage_limit = monthlyPlan.mileage_limit;
-  //       inventoryMapping.tariff_monthly.is_mileage_unlimited = monthlyPlan.is_mileage_unlimited;
-  //       inventoryMapping.tariff_monthly.partial_security_deposit = monthlyPlan.partial_security_deposit;
-  //       inventoryMapping.tariff_monthly.hikePercentage = monthlyPlan.hikePercentage;
-  //     }
-
-
-  //     inventoryMapping.minimumRentalDays = item.minimumRentalDays;
-  //     inventoryMapping.currency = item.currency;
-  //     inventoryMapping.discount_percentage = item.discount_percentage;
-  //     inventoryMapping.overrun_cost_per_km = item.overrun_cost_per_km;
-  //     inventoryMapping.insurance_charge = item.insurance_charge;
-  //     inventoryMapping.total_security_deposit = item.total_security_deposit;
-
-
-
-  //     inventories.push(inventoryMapping);
-  //   });
-
-  //   return standardResponse(
-  //       true,
-  //       'all inventories data fetched successfully',
-  //       200,
-  //       inventories,
-  //       null,
-  //       '/inventory/getAllInventoriesWithPricing',
-  //   );
-
-
-
-  //   }else{
-  //     return standardResponse(
-  //       true,
-  //       'no inventory exists',
-  //       400,
-  //       {data:[]},
-  //       null,
-  //       '/inventory/getAllInventoriesWithPricing',
-  //   );
-  //   }
+  } catch (error) {
+    return standardResponse(
+      false,
+      'Internal server error',
+      500,
+      null,
+      error,
+      '/inventory/getAllInventoriesWithPricing',
+    );
+  }
+}
 
 
 
 
-  //   } catch (error) {
-  //     return standardResponse(
-  //       false,
-  //       'Internal server error',
-  //       500,
-  //       null,
-  //       error,
-  //       '/inventory/getAllInventoriesWithPricing',
-  //     );
-  //   }
-  // }
 }
