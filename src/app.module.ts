@@ -7,6 +7,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from './modules/users/users.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { SearchLocationModule } from './modules/search-locations/search-locations.module';
+import { ReservationModule } from './modules/reservations/reservation.module';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { SearchLocationModule } from './modules/search-locations/search-location
     VehicleModule,
     UsersModule,
     WhatsappModule,
-    SearchLocationModule
+    SearchLocationModule,
+    ReservationModule
   ],
   controllers: [AppController],
   providers: [AppService],

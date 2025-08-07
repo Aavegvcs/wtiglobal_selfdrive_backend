@@ -1,3 +1,5 @@
+import moment from "moment-timezone";
+
 function checkTime(i:any) : any {
     if (i < 10) {
         i = "0" + i;
@@ -29,4 +31,10 @@ export function timeStamp(): any {
         ":" +
         seconds
     );
+}
+
+export function convertUtcToTimezone(utcTimestamp : string, targetTimezone: string): string {
+    let dateTime: string | Array<string> =  moment.utc(utcTimestamp).tz(targetTimezone).format("YYYY-MM-DD HH:mm:ss");
+    dateTime = dateTime.split(" ")
+    return `${dateTime[0]}, ${dateTime[1]}`
 }
