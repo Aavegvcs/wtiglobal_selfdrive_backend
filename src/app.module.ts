@@ -8,6 +8,8 @@ import { UsersModule } from './modules/users/users.module';
 import { WhatsappModule } from './modules/whatsapp/whatsapp.module';
 import { SearchLocationModule } from './modules/search-locations/search-locations.module';
 import { ReservationModule } from './modules/reservations/reservation.module';
+import { PricingModule } from './modules/pricing/pricing.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 
 @Module({
   imports: [
@@ -32,7 +34,9 @@ import { ReservationModule } from './modules/reservations/reservation.module';
     UsersModule,
     WhatsappModule,
     SearchLocationModule,
-    ReservationModule
+    ReservationModule,
+    PricingModule,
+    InventoryModule
   ],
   controllers: [AppController],
   providers: [AppService],
