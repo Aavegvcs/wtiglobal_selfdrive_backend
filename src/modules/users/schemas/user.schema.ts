@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type UserDocument = User & Document;
 
-@Schema({ timestamps: true, collection: 'master_users' })
+@Schema({ timestamps: true, collection: 'sd_master_users' })
 export class User {
   @Prop({ required: true, unique: true })
   userID: string;

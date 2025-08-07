@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 export type PricingDocument = Pricing & Document;
 
-@Schema({ timestamps: true, collection: 'vehicle_pricing' }) // adds createdAt and updatedAt
+@Schema({ timestamps: true, collection: 'sd_vehicle_pricings' }) // adds createdAt and updatedAt
 export class Pricing {
   @Prop({ type: Types.ObjectId, ref: 'countries', required: true })
   country_id: Types.ObjectId;
