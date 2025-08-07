@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
 
-@Schema({ timestamps: true, collection: 'provisional_receipts' })
+@Schema({ timestamps: true, collection: 'sd_provisional_receipts' })
 export class ProvisionalReceipt extends Document {
   @Prop({required: true}) 
   receiptId: string;

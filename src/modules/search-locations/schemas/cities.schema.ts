@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Countries } from './countries.schema';
 
-@Schema({ timestamps: true })
+@Schema({ timestamps: true, collection: 'sd_cities' })
 export class Cities extends Document {
   @Prop({ required: true, unique: true }) city: string;
   @Prop({ required: true, uppercase: true }) countryCode: string;

@@ -5,7 +5,7 @@ import { FinalReceipt } from './final-receipt.schema';
 import { Extras } from 'src/modules/extras/schemas/extras.schema';
 import { Vehicle } from 'src/modules/vehicles/schemas/vehicle.schema';
 
-@Schema({ timestamps: true, collection: 'final_reservations' })
+@Schema({ timestamps: true, collection: 'sd_final_reservations' })
 export class FinalReservation extends Document {
   @Prop({ required: true })
   timezone: string;

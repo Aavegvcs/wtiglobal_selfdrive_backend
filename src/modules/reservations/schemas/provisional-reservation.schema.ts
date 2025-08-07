@@ -5,7 +5,7 @@ import { ProvisionalReceipt } from './provisional-receipt.schema';
 import { Extras } from 'src/modules/extras/schemas/extras.schema';
 import { Vehicle } from 'src/modules/vehicles/schemas/vehicle.schema';
 
-@Schema({ timestamps: true, collection: 'provisional_reservations' })
+@Schema({ timestamps: true, collection: 'sd_provisional_reservations' })
 export class ProvisionalReservation extends Document {
   @Prop({ required: true })
   timezone: string;
