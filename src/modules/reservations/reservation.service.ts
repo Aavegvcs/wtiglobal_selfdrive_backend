@@ -11,6 +11,7 @@ import { Extras } from '../extras/schemas/extras.schema';
 import { FinalReservation } from './schemas/final-reservation.schema';
 import { FinalReceipt } from './schemas/final-receipt.schema';
 import { FinalReservationDto } from './dto/create-final-reservation.dto';
+import { PaymentGatewayService } from '../payment-gateway/payment-gateway.service';
 
 const logger = new Logger('ReservationService');
 
@@ -23,6 +24,7 @@ export class ReservationService {
     @InjectModel(FinalReceipt.name) private finalReceiptModel: Model<FinalReceipt>,
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Extras.name) private extrasModel: Model<Extras>,
+    private readonly paymentGatewayService: PaymentGatewayService, 
   ) {}
 
   
@@ -131,11 +133,45 @@ export class ReservationService {
 
       await reservationResult.save();
 
+      console.log('----------------------- finally creating order/session -----------------------------')
+      
+      let orderData: any = null;
+      // If payment gateway is Razorpay, create an order
+
+      if(String(reservation.paymentGatewayUsed) == '1') {
+        orderData = await this.paymentGatewayService.createOrder(
+          {
+            amount: receipt.totalFare, 
+            currency: receipt.currencyInfo.currency,
+            receiptID: receiptId,
+            notes: {
+              message: `Self Drive Reservation Order ${order_reference_number} for user ${reservation.user_id}`,
+            }
+          }
+        )
+
+        orderData = orderData?.result || null;
+      } else if(String(reservation.paymentGatewayUsed) == '0') {
+        orderData = await this.paymentGatewayService.createCheckoutSession({
+          amount: receipt.totalFare,
+          currency: receipt.currencyInfo.currency,
+          customerId: reservation.stripeCustomerId ?? '',
+          receiptId: receiptId,
+          order_reference_number: order_reference_number,
+          userType: reservation.userType,
+        })
+      }
+
+      console.log('orderData', orderData)
+      
+      console.log('--------------------- order created --------------------------')
+
       return standardResponse(true, 'Provisional reservation and receipt created', 201, {
         reservation_id: reservationResult._id,
         order_reference_number: reservationResult.order_reference_number,
         reservationCreated: true,
         receiptCreated: true,
+        orderData: orderData,
         }, null, '/reservation/createProvisionalReservation'
       );
 
@@ -143,13 +179,12 @@ export class ReservationService {
       return standardResponse(false, 'Internal Server Error', 500, {
         reservationCreated: false,
         receiptCreated: false,
+        orderData: null
         }, error, '/reservation/createProvisionalReservation');
     }
   }
 
-  async createFinalReservation(
-    finalReservationDto : FinalReservationDto
-  ): Promise<any> {
+  async makeFinalReservation(finalReservationDto : FinalReservationDto): Promise<any> {
     try {
 
       const {
@@ -163,7 +198,7 @@ export class ReservationService {
         let isMailSent :boolean = false;
 
         console.log('-------------------------------------------------------------------')
-        console.log(`createFinalReservation with req.body: ${order_reference_number}`);
+        console.log(`makeFinalReservation function with req.body: ${order_reference_number}`);
         console.log('-------------------------------------------------------------------')
 
 
@@ -227,9 +262,22 @@ export class ReservationService {
         order_reference_number: reservationResult.order_reference_number,
         reservationCreated: true,
         receiptCreated: true,
-        }, null, '/reservation/createFinalReservation'
+        }, null, 'makeFinalReservation function'
       );
 
+    } catch (error) {
+      return standardResponse(false, 'Internal Server Error', 500, {
+        reservationCreated: false,
+        receiptCreated: false,
+        }, error.stack, 'makeFinalReservation function');
+    }
+  }
+
+  async createFinalReservation(
+    finalReservationDto : FinalReservationDto
+  ): Promise<any> {
+    try {
+      return this.makeFinalReservation(finalReservationDto)
     } catch (error) {
       return standardResponse(false, 'Internal Server Error', 500, {
         reservationCreated: false,

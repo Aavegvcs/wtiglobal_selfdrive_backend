@@ -31,9 +31,8 @@ export class CreateProvisionalReservationDto {
   @IsString()
   invoice_id?: string;
 
-  @IsOptional()
   @IsEnum(['CUSTOMER', 'TA'])
-  userType?: string;
+  userType: string;
 
   @IsMongoId()
   @IsNotEmpty()
