@@ -5,6 +5,8 @@ import { FinalReceipt } from '../reservations/schemas/final-receipt.schema';
 import { User } from '../users/schemas/user.schema';
 import { Vehicle } from '../vehicles/schemas/vehicle.schema';
 import { convertUtcToTimezone } from 'src/common/utils/time.util';
+import { CreateContactUsDto } from '../contact-us/dto/create-contact-us.dto';
+import { ConfigService } from '@nestjs/config';
 
 const logger = new Logger('MailService');
 
@@ -12,7 +14,8 @@ const logger = new Logger('MailService');
 export class MailService {
 
   constructor(
-    private readonly mailerService: MailerService // You can inject a wrapper for nodemailer here
+    private readonly mailerService: MailerService, // You can inject a wrapper for nodemailer here
+    private readonly configService: ConfigService
   ) {}
 
 
@@ -204,6 +207,38 @@ export class MailService {
       logger.error(`Failed to send booking confirmation mail: ${error.message}`, error.stack);
       return false;
     }
+  }
+
+  
+  async sendMailToWti(data: CreateContactUsDto) {
+
+    const toMail: string = this.configService.get<string>('MAIL_USER')!;
+    const subject = 'Self Drive: Feedback from user';
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; padding: 20px;">
+          <p>Dear Team,</p>
+          <p>We have received new customer feedback with the following details:</p>
+          <ul>
+            <li><strong>Name:</strong> ${data.name}</li>
+            <li><strong>Email:</strong> ${data.email}</li>
+            <li><strong>Contact Number:</strong> ${data.contact}</li>
+            <li><strong>Location:</strong> ${data.location}</li>
+          </ul>
+          <p><strong>Feedback Description:</strong> ${data.description}</p>
+          <p><strong>Source url:</strong> ${data?.slug ?? '/'}</p>
+          <p>Please review this feedback and take any necessary actions.</p>
+          <p>Best regards,<br>Your Team</p>
+        </body>
+      </html>
+    `;
+
+    await this.mailerService.mailSender({
+      to: toMail,
+      subject,
+      html,
+    });
   }
 
 }

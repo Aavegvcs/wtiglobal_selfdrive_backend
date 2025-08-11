@@ -11,6 +11,7 @@ import { ReservationModule } from './modules/reservations/reservation.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { CarRentalLocationsModule } from './modules/car-rental-locations/car-rental-locations.module';
+import { ContactUsModule } from './modules/contact-us/contact-us.module';
 
 @Module({
   imports: [
@@ -38,7 +39,8 @@ import { CarRentalLocationsModule } from './modules/car-rental-locations/car-ren
     ReservationModule,
     PricingModule,
     InventoryModule,
-    CarRentalLocationsModule
+    CarRentalLocationsModule,
+    ContactUsModule
   ],
   controllers: [AppController],
   providers: [AppService],

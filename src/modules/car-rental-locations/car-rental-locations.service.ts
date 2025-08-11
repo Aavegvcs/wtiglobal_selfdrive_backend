@@ -4,12 +4,14 @@ import { Model } from 'mongoose';
 import { CreateCarRentalLocationDto } from './dto/create-car-rental-locations.dto';
 import { CarRentalLocation, CarRentalLocationDocument } from './schemas/car-rental-locations.schema';
 import { standardResponse } from 'src/common/helpers/response.helper';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CarRentalLocationsService {
   constructor(
     @InjectModel(CarRentalLocation.name)
     private readonly locationModel: Model<CarRentalLocationDocument>,
+    private readonly configService: ConfigService
   ) {}
 
   async createOrUpdateCarRentalLocation(dto: Partial<CreateCarRentalLocationDto>) {
@@ -35,12 +37,19 @@ export class CarRentalLocationsService {
 
   async getAllCarRentalLocationsOnCountry(countryCode: string) {
     try {
-      const locations = await this.locationModel.find({ countryCode }).exec();
+      const baseUrl = this.configService.get<string>('BASE_URL_IMAGES')
+
+      let locations: Array<any> = [];
+      locations = await this.locationModel.find({ countryCode: countryCode, isActive: true }).select("-createdAt -updatedAt -__v -isActive").exec();
+
+      for (let i = 0; i < locations.length; i++) {
+        locations[i].image = baseUrl+locations[i].image;
+      }
 
       const responseData = {
         isActive: true,
         tagline: "Car Rental Locations Across the World",
-        availableInCountries: ["UAE"],
+        availableInCountries: [{label:"UAE", value: "UAE"}, {label:"India", value: "IND"}],
         data: locations
       }
       return standardResponse(true, 'Locations fetched successfully', 200, responseData, null, "/car-rental-locations/getAllCarRentalLocationsOnCountry");
