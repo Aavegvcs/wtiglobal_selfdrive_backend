@@ -70,7 +70,7 @@ export class SearchLocationsService {
   try {
     const cities = await this.cityModel
       .find({countryCode: countryCode, isActive: true})
-      .select("-_id -countryId -__v -updatedAt -createdAt -isActive")
+      .select("-_id -__v -updatedAt -createdAt -isActive")
       .exec();
 
     return standardResponse(
