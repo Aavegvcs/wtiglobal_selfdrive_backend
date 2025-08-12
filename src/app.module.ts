@@ -12,6 +12,7 @@ import { PricingModule } from './modules/pricing/pricing.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import { CarRentalLocationsModule } from './modules/car-rental-locations/car-rental-locations.module';
 import { ContactUsModule } from './modules/contact-us/contact-us.module';
+import { FaqModule } from './modules/faq/faq.module';
 
 @Module({
   imports: [
@@ -40,7 +41,8 @@ import { ContactUsModule } from './modules/contact-us/contact-us.module';
     PricingModule,
     InventoryModule,
     CarRentalLocationsModule,
-    ContactUsModule
+    ContactUsModule,
+    FaqModule
   ],
   controllers: [AppController],
   providers: [AppService],

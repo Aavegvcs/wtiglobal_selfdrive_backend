@@ -42,7 +42,7 @@ async function bootstrap() {
     console.error('❌ MongoDB connection error:', err);
   });
 
-  console.log(`🚀 Running in ${process.env.NODE_ENV} mode ...!`);
+  console.log(`🚀 Running in ${process.env.NODE_ENV} mode on Port: ${configService.get<string>('PORT') ?? 3005}`);
 
 }
 bootstrap();
