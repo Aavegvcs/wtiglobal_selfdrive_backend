@@ -14,7 +14,7 @@ export class InventoryController {
     return res.status(response.statusCode).json(response)
   }
   @Get('getAllInventoryByCountry/:country_id')
-  async getAllInventoryByCountry(@Param('country_id') country_id:String, @Res() res: Response) {
+  async getAllInventoryByCountry(@Param('country_id') country_id:string, @Res() res: Response) {
     const response = await this.inventoryService.getAllInventoryByCountry(country_id);
     return res.status(response.statusCode).json(response)
   }

@@ -3,6 +3,15 @@ import { Document } from 'mongoose';
 
 export type VehicleDocument = Vehicle & Document;
 
+
+export enum VehiclePromotionTag {
+  Popular = 'Popular',
+  Trending = 'Trending',
+  Best_Seller = 'Best Seller',
+  NONE = '', // Optional default value for vehicles with no promotion
+}
+
+
 @Schema({ timestamps: true , collection: 'sd_master_vehicles' })
 export class Vehicle {
   @Prop({ required: true })
@@ -33,6 +42,7 @@ export class Vehicle {
       ExteriorColor: { type: String },
       Manufactory: { type: String },
       BodyType: { type: String },
+      LuggageCapacity: {type: String},
     },
     required: true,
   })
@@ -54,10 +64,14 @@ export class Vehicle {
     ExteriorColor: String;
     Manufactory: String;
     BodyType: String;
+    LuggageCapacity: String;
   };
 
   @Prop({ type: Number, default: 0 })
   vehicle_rating: Number;
+
+   @Prop({ type: String, enum: VehiclePromotionTag, default: VehiclePromotionTag.NONE })
+  vehicle_promotion_tag?: VehiclePromotionTag;  
 
   @Prop({ default: true })
   isActive: Boolean;

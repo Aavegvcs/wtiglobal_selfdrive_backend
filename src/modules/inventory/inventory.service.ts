@@ -5,6 +5,7 @@ import { Pricing, PricingDocument } from '../pricing/schema/pricing.schema';
 import { SearchPricingDto } from './dto/search-all-inventory.dto';
 import { standardResponse } from 'src/common/helpers/response.helper';
 import { SearchSinglePricingDto } from './dto/search-single-inventory.dto';
+import items from 'razorpay/dist/types/items';
 
 @Injectable()
 export class InventoryService {
@@ -189,33 +190,135 @@ export class InventoryService {
   }
 }
 
-async getAllInventoryByCountry(country_id: String): Promise<any> {
-  try {
-    const inventory = await this.pricingModel.find({
-      country_id,
-      isActive: true,
-    }).populate('vehicle_id');
+// Assuming NestJS + Mongoose + TypeScript
 
+async getAllInventoryByCountry(country_id: string): Promise<any> {
+  try {
+    const inventory = await this.pricingModel
+      .find(
+        { country_id, isActive: true },
+        // project only what you need from pricing docs
+        {
+          tariff_daily: 1,
+          tariff_weekly: 1,
+          tariff_monthly: 1,
+          minimumRentalDays: 1,
+          currency: 1,
+          discount_percentage: 1,
+          vehicle_id: 1,
+        },
+      )
+      .populate({
+        path: 'vehicle_id',
+        select: 'model_name specs images vehicle_rating isActive', // only required fields
+      })
+      .lean(); // return plain objects so optional chaining works predictably
+
+    // Prefer 200 with empty array for "no data"
     if (!inventory || inventory.length === 0) {
       return standardResponse(
         true,
-        'no inventory exists',
-        400,
-        { data: [] },
+        'No inventory exists',
+        200,
+        [],
         null,
         '/inventory/getAllInventoryByCountry',
       );
     }
 
+    const inventoryData = inventory.map((doc) => {
+      const v = doc.vehicle_id as any | null; // populated vehicle or null
+
+      // Guard against missing vehicle document (bad ref / not found)
+      const model_name = v?.model_name ?? null;
+      const specs = v?.specs ?? {};
+      const imagesObj = v?.images ?? {};
+      const urlPrefix: string = imagesObj?.url_prefix ?? '';
+      const s3Paths: string[] = Array.isArray(imagesObj?.s3_paths)
+        ? imagesObj.s3_paths
+        : [];
+
+      // Build full image URLs safely
+      const allImagesUrl = urlPrefix && s3Paths.length
+        ? s3Paths.map((p) => `${urlPrefix}${p}`)
+        : [];
+      
+      
+      let plan = doc.tariff_monthly?.find((plan) => plan.duration === 1);
+      console.log(plan);
+      return {
+        vehicle_id: {
+          model_name,
+          specs: {
+            Class: specs?.Class ?? null,
+            EngineCapacity: specs?.EngineCapacity ?? null,
+            MaxSpeed: specs?.MaxSpeed ?? null,
+            Doors: specs?.Doors ?? null,
+            Year: specs?.Year ?? null,
+            PowerHP: specs?.PowerHP ?? null,
+            Transmission: specs?.Transmission ?? null,
+            IsSimilarCarsTitle: specs?.IsSimilarCarsTitle ?? false,
+            IsVerified: specs?.IsVerified ?? false,
+            IsSimilarCars: specs?.IsSimilarCars ?? false,
+            Model: specs?.Model ?? null,
+            Seats: specs?.Seats ?? null,
+            Order_number: specs?.Order_number ?? null,
+            DriveType: specs?.DriveType ?? null,
+            ExteriorColor: specs?.ExteriorColor ?? null,
+            Manufactory: specs?.Manufactory ?? null,
+            BodyType: specs?.BodyType ?? null,
+            LuggageCapacity: specs?.LuggageCapacity ?? null,
+            mileage_limit: doc.tariff_daily?.mileage_limit ?? 0,
+            _id: v?._id ?? null,
+          },
+          vehicle_rating: v?.vehicle_rating ?? null,
+          isActive: v?.isActive ?? false,
+          images: allImagesUrl,
+        },
+
+        tariff_daily: {
+          base: doc.tariff_daily?.base ?? 0,
+          mileage_limit: doc.tariff_daily?.mileage_limit ?? 0,
+          is_mileage_unlimited: doc.tariff_daily?.is_mileage_unlimited ?? false,
+          partial_security_deposit:
+            doc.tariff_daily?.partial_security_deposit ?? 0,
+          hikePercentage: doc.tariff_daily?.hikePercentage ?? 0,
+        },
+
+        tariff_weekly: {
+          base: doc.tariff_weekly?.base ?? 0,
+          mileage_limit: doc.tariff_weekly?.mileage_limit ?? 0,
+          is_mileage_unlimited: doc.tariff_weekly?.is_mileage_unlimited ?? false,
+          partial_security_deposit:
+            doc.tariff_weekly?.partial_security_deposit ?? 0,
+          hikePercentage: doc.tariff_weekly?.hikePercentage ?? 0,
+        },
+
+        tariff_monthly: {
+          duration: plan?.duration ?? 0,
+          base: plan?.base ?? 0,
+          mileage_limit: plan?.mileage_limit ?? 0,
+          is_mileage_unlimited:
+            plan?.is_mileage_unlimited ?? false,
+          partial_security_deposit:
+            plan?.partial_security_deposit ?? 0,
+          hikePercentage: plan?.hikePercentage ?? 0,
+        },
+
+        minimumRentalDays: doc.minimumRentalDays ?? 0,
+        currency: doc.currency ?? 'INR',
+        discount_percentage: doc.discount_percentage ?? 0,
+      };
+    });
+
     return standardResponse(
       true,
-      'all vehicle data fetched successfully',
+      'All vehicle data fetched successfully',
       200,
-      inventory,
+      inventoryData,
       null,
       '/inventory/getAllInventoryByCountry',
     );
-
   } catch (error) {
     return standardResponse(
       false,

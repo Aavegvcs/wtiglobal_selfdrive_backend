@@ -22,6 +22,7 @@ export class CreateVehicleDto {
     BodyType: string;
   };
   vehicle_rating?: number;
+  vehicle_promotion_tag?: String;
   isActive?: boolean;
   images?: {
     url_prefix: string;
