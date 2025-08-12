@@ -1,6 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import * as moment from 'moment';
 import { WrapperReservationDto } from './dto/wrapper-reservation.dto';
 import { ProvisionalReservation } from './schemas/provisional-reservation.schema';
@@ -285,4 +285,174 @@ export class ReservationService {
         }, error.stack, '/reservation/createFinalReservation');
     }
   }
+
+  async getFinalReservationAndReceipts(user_id: string) {
+    try {
+      
+      if (!isValidObjectId(user_id)) {
+        throw new BadRequestException('Invalid MongoDB ObjectId');
+      }
+  
+      const bookingsData = await this.finalReservationModel
+        .find({
+          user_id: user_id,
+          isModifiedFlag: false,
+        })
+        .populate([
+          { path: 'vehicle_id', select: "-createdAt -updatedAt" },
+          { path: 'receipt_ref_id', select: "-createdAt -updatedAt"},
+          // { path: 'user_id', select: 'firstName' },
+          // { path: 'extrasSelected' },
+        ])
+        .lean().exec();
+  
+  
+      const sortedBookings = bookingsData.sort(
+        (a, b) => new Date(b.pickupDate).getTime() - new Date(a.dropDate).getTime(),
+      );
+      return standardResponse(true, "Successfully fetched reservations", 200, sortedBookings, null, '/reservation/getFinalReservationAndReceipts');
+    } catch (error) {
+      return standardResponse(false, 'Internal Server Error', 500, null, error.stack, '/reservation/getFinalReservationAndReceipts');
+    }
+  }
+
+  async getConfirmedReservation(order_reference_number: string) {
+    try {
+      
+      if (!order_reference_number) throw new BadRequestException('Missing required order_reference_number');
+  
+      const result = await this.finalReservationModel.findOne({order_reference_number})
+        .populate([
+          { path: 'receipt_ref_id', select: '-createdAt -updatedAt' },
+          { path: 'vehicle_id', select: '-createdAt -updatedAt' },
+        ])
+        .lean().exec();
+
+      if (!result) throw new NotFoundException('Reservation not found');
+
+      return standardResponse(true, "Successfully fetched confirmed reservation", 200, result, null, '/reservation/getConfirmedReservation');
+    } catch (error) {
+      return standardResponse(false, 'Internal Server Error', 500, null, error.stack, '/reservation/getConfirmedReservation');
+    }
+
+  }
+
+  async getFailedReservation(order_reference_number: string) {
+    try {
+
+      if (!order_reference_number) throw new BadRequestException('Missing required order_reference_number');
+
+      const result = await this.provisionalReservationModel.findOne({ order_reference_number })
+        .populate([
+          { path: 'receipt_ref_id', select: '-createdAt -updatedAt' },
+          { path: 'vehicle_id', select: '-createdAt -updatedAt' },
+        ])
+        .lean().exec();
+
+      if (!result) throw new NotFoundException('Reservation not found');
+
+      return standardResponse(true, "Successfully fetched failed reservation", 200, result, null, '/reservation/getFailedReservation');
+    } catch (error) {
+      return standardResponse(false, 'Internal Server Error', 500, null, error.stack, '/reservation/getFailedReservation');
+    }
+  }
+
+  // async cancelReservation(data: CancelChauffeurReservationDto) {
+  //   if (!data.id || !data.cancellation_reason || data.amount === undefined || data.payment_gateway_used === undefined) {
+  //     throw new BadRequestException('Missing required id or amount or cancellation_reason or payment_gateway_used!');
+  //   }
+
+  //   let mailSent = false;
+
+  //   try {
+  //     const reservation = await this.finalReservationModel
+  //       .findByIdAndUpdate(data.id, {
+  //         $set: {
+  //           BookingStatus: 'CANCELLED',
+  //           cancellation_reason: data.cancellation_reason,
+  //           canceltime: new Date(),
+  //         },
+  //       })
+  //       .populate([
+  //         { path: 'reciept_id' },
+  //         { path: 'extrasSelected' },
+  //         { path: 'passenger' },
+  //       ])
+  //       .exec();
+
+  //     if (!reservation) {
+  //       throw new NotFoundException(`Reservation with ID ${data.id} not found`);
+  //     }
+
+  //     if (data.payment_gateway_used === 1) {
+  //       if (!data.paymentId || !data.receiptId) {
+  //         throw new BadRequestException('Missing required paymentId or receiptId!');
+  //       }
+
+  //       const isSent = await this.sendChauffeurCancellationMail(
+  //         reservation,
+  //         data.paymentId,
+  //         data.amount,
+  //         data.receiptId,
+  //       );
+  //       mailSent = isSent.mailSent;
+
+  //       await sendCancellationPacketToPanel(
+  //         data.id,
+  //         reservation?.reference_number,
+  //         reservation?.order_reference_number,
+  //       );
+
+  //       return {
+  //         ReservationCancelled: true,
+  //         ID: data.id,
+  //         message: 'Chauffeur Reservation Cancelled Successfully',
+  //         mailSent,
+  //       };
+  //     } else {
+  //       let extrasSelected = reservation.extrasSelected;
+  //       if (extrasSelected?.length) {
+  //         extrasSelected = extrasSelected.map(extra => extra.name).join(', ');
+  //       }
+
+  //       const cancellationDataPacket = {
+  //         recipient: `${reservation.passenger.contactCode}${reservation.passenger.contact}`,
+  //         firstName: reservation.passenger.firstName,
+  //         emailID: reservation.passenger.emailID,
+  //         order_reference_number: reservation.order_reference_number,
+  //         payment_id: reservation.stripe_payment_id,
+  //         extrasSelected: extrasSelected?.length ? extrasSelected : 'No extras selected',
+  //         bookingStatus: reservation.BookingStatus,
+  //         start_time: reservation.start_time,
+  //         pickupAt: reservation.start_time, // convert to timezone in util
+  //         dropAt: reservation.trip_type_details.trip_type === 'ONE_WAY' ? reservation.end_time : '',
+  //         pickupLocation: reservation.source.address,
+  //         dropLocation: reservation?.destination?.address ?? 'NA',
+  //         tripType: `${reservation.trip_type_details.basic_trip_type} ${reservation.trip_type_details.trip_type}`,
+  //         distance: reservation.distance,
+  //         vehicle: reservation.vehicle_details?.title ?? '',
+  //         package: reservation.package ?? 'No package selected',
+  //         baseFare: (reservation.reciept_id.fare_details.base_fare * reservation.reciept_id.currency.currencyRate).toFixed(2),
+  //         currency: reservation.reciept_id.currency.currencyName,
+  //         tax: 0,
+  //         discount: (reservation.reciept_id.fare_details.seller_discount * reservation.reciept_id.currency.currencyRate).toFixed(2),
+  //         grandTotal: (reservation.reciept_id.fare_details.total_fare * reservation.reciept_id.currency.currencyRate).toFixed(2),
+  //         carCategoryName: reservation.vehicle_details?.model ?? '',
+  //       };
+
+  //       const isSent = await sendTACancellationEmail(cancellationDataPacket);
+  //       mailSent = isSent.mailSent;
+
+  //       return {
+  //         ReservationCancelled: true,
+  //         ID: data.id,
+  //         message: 'Chauffeur Reservation Cancelled Successfully',
+  //         mailSent,
+  //       };
+  //     }
+  //   } catch (error) {
+  //     return standardResponse(false, 'Internal Server Error', 500, null, error.stack,  "reservation/cancelReservation");
+  //   }
+  // }
+
 }

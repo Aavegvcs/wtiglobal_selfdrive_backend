@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Res } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Res } from "@nestjs/common";
 import { ReservationService } from "./reservation.service";
 import { CreateProvisionalReservationDto } from "./dto/create-provisional-reservation.dto";
 import { Response } from "express";
@@ -19,6 +19,18 @@ export class ReservationController {
     @Post('createFinalReservation') 
     async createFinalReservation(@Body() finalReservationDto: FinalReservationDto, @Res() res: Response) {
         const response = await this.reservationService.createFinalReservation(finalReservationDto);
+        return res.status(response.statusCode).json(response);
+    }
+    
+    @Get('getConfirmedReservation/:order_reference_number') 
+    async getConfirmedReservation(@Param('order_reference_number') order_reference_number: string, @Res() res: Response) {
+        const response = await this.reservationService.getConfirmedReservation(order_reference_number);
+        return res.status(response.statusCode).json(response);
+    }
+
+    @Get('getFailedReservation/:order_reference_number') 
+    async getFailedReservation(@Param('order_reference_number') order_reference_number: string, @Res() res: Response) {
+        const response = await this.reservationService.getFailedReservation(order_reference_number);
         return res.status(response.statusCode).json(response);
     }
 }
