@@ -9,6 +9,7 @@ import {
   IsNotEmpty
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaymentMethod } from 'src/common/enums/payment-method-type.enum';
 
 class CurrencyInfoDto {
   @IsString()
@@ -65,7 +66,7 @@ export class CreateProvisionalReceiptDto {
   collectionCharge?: number;
 
   @IsString()
-  @IsEnum(['INR', 'USD', 'AED'])
+  @IsEnum(['AED'])
   baseCurrency: string;
 
   @ValidateNested()
@@ -102,7 +103,7 @@ export class CreateProvisionalReceiptDto {
 
   @IsString()
   @IsOptional()
-  @IsEnum(['CASH', 'CARD', 'UPI'])
+  @IsEnum(PaymentMethod)
   paymentMethod?: string;
 
   @IsBoolean()

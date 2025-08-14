@@ -1,7 +1,9 @@
 import { IsString, IsNotEmpty, IsEnum, IsDate, IsMongoId, IsOptional, IsBoolean, IsArray, ValidateNested, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Vehicle } from 'src/modules/vehicles/schemas/vehicle.schema';
-import { Types } from 'mongoose';
+import { PaymentType } from 'src/common/enums/payment-type.enum';
+import { UserRole } from 'src/common/enums/user-role.enum';
+import { RentalType } from 'src/common/enums/rental-type.enum';
 
 export class DiscountDto {
   @IsOptional()
@@ -31,8 +33,11 @@ export class CreateProvisionalReservationDto {
   @IsString()
   invoice_id?: string;
 
-  @IsEnum(['CUSTOMER', 'TA'])
+  @IsEnum(UserRole)
   userType: string;
+
+  @IsEnum(RentalType)
+  rentalType: string;
 
   @IsMongoId()
   @IsNotEmpty()
@@ -80,7 +85,7 @@ export class CreateProvisionalReservationDto {
   @IsString()
   reservationStatus?: string;
 
-  @IsEnum(['FULL', 'REFUND', 'PART'])
+  @IsEnum(PaymentType)
   @IsNotEmpty()
   paymentType: string;
 
