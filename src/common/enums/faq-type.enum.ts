@@ -1,0 +1,5 @@
+export enum FaqType {
+  GENERAL = 'GENERAL',
+  DAILY_WEEKLY = 'DAILY_WEEKLY',
+  MONTHLY = 'MONTHLY',
+}
