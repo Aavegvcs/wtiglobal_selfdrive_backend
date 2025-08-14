@@ -7,6 +7,13 @@ import { standardResponse } from 'src/common/helpers/response.helper';
 import { SearchSinglePricingDto } from './dto/search-single-inventory.dto';
 import items from 'razorpay/dist/types/items';
 
+function parseDateTime(dateStr: string, timeStr: string) {
+  const [day, month, year] = dateStr.split('/').map(Number);
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return new Date(year, month - 1, day, hours, minutes);
+}
+
+
 @Injectable()
 export class InventoryService {
   constructor(
@@ -15,22 +22,41 @@ export class InventoryService {
 
   async getAllInventoryWithPricing(dto: SearchPricingDto): Promise<any> {
   try {
-    const { country_id, pickup_date, drop_date, plan_type, duration_months } = dto;
+   const { source, pickup, drop, plan_type, duration_months } = dto;
 
-    let durationDays = 0;
-    if (plan_type === 'daily' || plan_type === 'weekly') {
-      const pickup = new Date(pickup_date);
-      const drop = new Date(drop_date);
-      const diffTime = Math.abs(drop.getTime() - pickup.getTime());
-      durationDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Convert ms to days
-    } else if (plan_type === 'monthly') {
-      durationDays = duration_months * 30;
-    }
+let durationDays = 0;
+
+// Helper function to parse "DD/MM/YYYY" and time "HH:mm"
+let planTypeString = '';
+let country_id = source.countryId;
+
+if(plan_type == 1){
+  planTypeString = "DAILY_WEEKLY_RENTAL";
+}else{
+  planTypeString = "MONTHLY_RENTAL";
+}
+
+
+
+if (planTypeString === 'DAILY_WEEKLY_RENTAL') {
+  const pickupDateTime = parseDateTime(pickup.date, pickup.time);
+  const dropDateTime = parseDateTime(drop.date, drop.time);
+
+  const diffTime = Math.abs(dropDateTime.getTime() - pickupDateTime.getTime());
+  durationDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Exact fractional days
+} 
+else if (planTypeString === 'MONTHLY_RENTAL') {
+  durationDays = Math.ceil((duration_months || 1) * 30);
+}
+
+console.log({ durationDays });
+
     // console.log(durationDays);
     const inventory = await this.pricingModel.find({
       country_id,
       isActive: true,
-    }).populate('vehicle_id');
+    }).populate({path: 'vehicle_id',
+        select: 'model_name specs images vehicle_rating isActive'}).lean();
 
     if (!inventory || inventory.length === 0) {
       return standardResponse(
@@ -47,13 +73,30 @@ export class InventoryService {
 
     for (const item of inventory) {
 
+      const v = item.vehicle_id as any | null;
+
+      console.log(v);
+
       const dailyPlan = item.tariff_daily || {};
       const weeklyPlan = item.tariff_weekly || {};
       const monthlyPlan = item.tariff_monthly?.find((plan) => plan.duration === 1);
 
+      const imagesObj = v?.images;
+      const urlPrefix: string = imagesObj?.url_prefix ?? '';
+      const s3Paths: string[] = Array.isArray(imagesObj?.s3_paths)
+        ? imagesObj.s3_paths
+        : [];
+
+      // Build full image URLs safely
+      const allImagesUrl = urlPrefix && s3Paths.length
+        ? s3Paths.map((p) => `${urlPrefix}${p}`)
+        : [];
+
+      v.images = allImagesUrl;
+
       let inventoryMapping = {
-        vehicle_details: item.vehicle_id,
-        searchedPlan:plan_type,
+        vehicle_id: item.vehicle_id,
+        searchedPlan:planTypeString,
         rentalDays:durationDays,
         finalPrice:0,
         tariff_daily: {
@@ -89,14 +132,16 @@ export class InventoryService {
 
       if (durationDays < 7) {
         const dailyRate = (dailyPlan.base || 0) * durationDays;
-        inventoryMapping.searchedPlan = "daily";
+        inventoryMapping.searchedPlan = "Daily";
         inventoryMapping.finalPrice = dailyRate;
-        
+        v.specs.mileage_limit = dailyPlan.mileage_limit;
+
       } else if (durationDays >= 7 && durationDays < 30) {
         const weeklyRatePerDay = (weeklyPlan.base || 0) / 7;
         const weeklyRate = weeklyRatePerDay * durationDays;
-        inventoryMapping.searchedPlan = "weekly";
+        inventoryMapping.searchedPlan = "Weekly";
         inventoryMapping.finalPrice = weeklyRate;
+        v.specs.mileage_limit = weeklyPlan.mileage_limit;
     
       } else if ((durationDays >= 30) || monthlyPlan) {
         let plan: any = {};
@@ -104,7 +149,7 @@ export class InventoryService {
           plan = item.tariff_monthly?.find((plan) => plan.duration === 1);
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
-          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.searchedPlan = "Monthly";
           inventoryMapping.finalPrice = monthlyRate,
           inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
           inventoryMapping.tariff_monthly.base = plan.base,
@@ -112,12 +157,13 @@ export class InventoryService {
           inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
           inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
           inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+          v.specs.mileage_limit = plan.mileage_limit;
 
         }else if(durationDays<180 || duration_months == 3){
           plan = item.tariff_monthly?.find((plan) => plan.duration === 3)
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
-          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.searchedPlan = "Monthly";
           inventoryMapping.finalPrice = monthlyRate,
           inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
           inventoryMapping.tariff_monthly.base = plan.base,
@@ -125,13 +171,14 @@ export class InventoryService {
           inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
           inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
           inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+          v.specs.mileage_limit = plan.mileage_limit;
           
 
         }else if(durationDays<270 || duration_months == 6){
           plan = item.tariff_monthly?.find((plan) => plan.duration === 6)
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
-          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.searchedPlan = "Monthly";
           inventoryMapping.finalPrice = monthlyRate,
           inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
           inventoryMapping.tariff_monthly.base = plan.base,
@@ -139,12 +186,13 @@ export class InventoryService {
           inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
           inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
           inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+          v.specs.mileage_limit = plan.mileage_limit;
 
         }else if(durationDays>=270 || duration_months == 9){
           plan = item.tariff_monthly?.find((plan) => plan.duration === 9)
           let monthlyRatePerDay = plan?.base/30;
           let monthlyRate = monthlyRatePerDay * durationDays;
-          inventoryMapping.searchedPlan = "monthly";
+          inventoryMapping.searchedPlan = "Monthly";
           inventoryMapping.finalPrice = monthlyRate,
           inventoryMapping.tariff_monthly.duration = plan?.duration || 0,
           inventoryMapping.tariff_monthly.base = plan.base,
@@ -152,6 +200,7 @@ export class InventoryService {
           inventoryMapping.tariff_monthly.is_mileage_unlimited =  plan?.is_mileage_unlimited || false,
           inventoryMapping.tariff_monthly.partial_security_deposit =  plan?.partial_security_deposit || 0,
           inventoryMapping.tariff_monthly.hikePercentage =  plan?.hikePercentage || 0
+          v.specs.mileage_limit = plan.mileage_limit;
 
         }
         

@@ -37,3 +37,16 @@ export function standardResponse<T = any>(
 
   return response;
 }
+
+
+
+export const tripTripMap = {
+    DAILY_RENTAL: {
+        code: 1,
+        textValue: "Daily or Weelky"
+    },
+    MONTHLY_RENTAL: {
+        code: 2,
+        textValue: "Monthly"
+    }
+}
