@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { PaymentMethod } from 'src/common/enums/payment-method-type.enum';
 
 @Schema({ timestamps: true, collection: 'sd_final_receipts' })
 export class FinalReceipt extends Document {
@@ -30,7 +31,7 @@ export class FinalReceipt extends Document {
   @Prop({default: 0}) 
   collectionCharge: number;
 
-  @Prop({enum: ['INR', 'USD', 'AED'], required: true}) 
+  @Prop({enum: ['AED'], default: "AED"}) 
   baseCurrency: String;
 
   @Prop({
@@ -80,7 +81,7 @@ export class FinalReceipt extends Document {
   @Prop({default: 20}) 
   part_payment_percentage: number;
 
-  @Prop({enum: ['CASH', 'CARD', 'UPI'], default: 'CARD'}) 
+  @Prop({enum: PaymentMethod, default: PaymentMethod.CARD}) 
   paymentMethod: string;
 
   @Prop({default: false}) isModifiedFlag: boolean;

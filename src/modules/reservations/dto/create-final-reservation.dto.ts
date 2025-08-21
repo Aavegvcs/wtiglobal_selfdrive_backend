@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { RentalType } from 'src/common/enums/rental-type.enum';
 
 export class FinalReservationDto {
   @IsString()
@@ -14,4 +15,7 @@ export class FinalReservationDto {
   @IsOptional()
   @IsString()
   razorpayOrderId?: string;
+
+  @IsEnum(RentalType)
+  rentalType: string;
 }

@@ -4,6 +4,11 @@ import { User } from 'src/modules/users/schemas/user.schema';
 import { ProvisionalReceipt } from './provisional-receipt.schema';
 import { Extras } from 'src/modules/extras/schemas/extras.schema';
 import { Vehicle } from 'src/modules/vehicles/schemas/vehicle.schema';
+import { PaymentType } from 'src/common/enums/payment-type.enum';
+import { ReservationStatusEnum } from 'src/common/enums/reservation-status.enum';
+import { PartnerName } from 'src/common/enums/partner-name.enum';
+import { UserRole } from 'src/common/enums/user-role.enum';
+import { RentalType } from 'src/common/enums/rental-type.enum';
 
 @Schema({ timestamps: true, collection: 'sd_provisional_reservations' })
 export class ProvisionalReservation extends Document {
@@ -25,13 +30,13 @@ export class ProvisionalReservation extends Document {
   @Prop() 
   invoice_id: string;
 
-  @Prop({ enum:["CUSTOMER", "TA"], default: "CUSTOMER" })
+  @Prop({ enum:UserRole, default: UserRole.CUSTOMER })
   userType: string;
 
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
   user_id: Types.ObjectId;
 
-  @Prop({ enum: ["WTI"], default: "WTI" })
+  @Prop({ enum: PartnerName, default: PartnerName.WTI })
   partnerName: string;
 
   @Prop({ required: true })
@@ -49,6 +54,9 @@ export class ProvisionalReservation extends Document {
   @Prop({ required: true })
   durationDays: number;
 
+  @Prop({ enum : RentalType, required: true})
+  rentalType: string
+
   @Prop({ type: Types.ObjectId, required: true, ref: Vehicle.name })
   vehicle_id: Types.ObjectId;
 
@@ -61,10 +69,10 @@ export class ProvisionalReservation extends Document {
   })
   extrasSelected: Types.ObjectId[];
 
-  @Prop({ default: "HOLD" })
+  @Prop({ default: ReservationStatusEnum.HOLD })
   reservationStatus: string;
 
-  @Prop({ enum: ["FULL", "REFUND", "PART"], required: true })
+  @Prop({ enum: PaymentType, required: true })
   paymentType: string;
 
   @Prop({ default: null })
@@ -79,7 +87,7 @@ export class ProvisionalReservation extends Document {
   @Prop({ default: null })
   finalPaymentId: string;
 
-  @Prop({ enum: ["0", "1"], required: true }) // 0 for stripe, 1 for razorpay
+  @Prop({ enum: PaymentType, required: true }) // 0 for stripe, 1 for razorpay
   paymentGatewayUsed: string;
 
   @Prop({
