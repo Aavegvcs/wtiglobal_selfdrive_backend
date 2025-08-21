@@ -1,33 +1,76 @@
-import { Optional } from '@nestjs/common';
 import {
   IsMongoId,
   IsNotEmpty,
   IsOptional,
-  IsDateString,
   IsNumber,
-  ValidateIf
+  ValidateIf,
+  IsString,
+  ValidateNested,
+  IsBoolean
 } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class LocationDto {
+  @IsString()
+  @IsNotEmpty()
+  city: string;
+
+  @IsMongoId()
+  countryId: string;
+
+  @IsString()
+  @IsNotEmpty()
+  countryCode: string;
+}
+
+class DateTimeDto {
+  @IsString()
+  @IsNotEmpty()
+  date: string; // "DD/MM/YYYY"
+
+  @IsString()
+  @IsNotEmpty()
+  time: string; // "HH:mm"
+}
 
 export class SearchSinglePricingDto {
 
-  @IsMongoId()
+   @IsMongoId()
   vehicle_id: string;
 
-  @IsDateString({ strict: true })
+  @ValidateNested()
+  @Type(() => LocationDto)
   @IsNotEmpty()
-  pickup_date: Date; // ISO string in UTC (e.g., "2025-07-29T10:00:00Z")
+  source: LocationDto;
 
-  @IsDateString({ strict: true })
-  @IsOptional()
-  drop_date: Date; // ISO string in UTC
+  @ValidateNested()
+  @Type(() => DateTimeDto)
+  @IsNotEmpty()
+  pickup: DateTimeDto;
 
-  @ValidateIf((o) => o.plan_type === 'monthly')
+  @ValidateNested()
+  @Type(() => DateTimeDto)
+  @IsNotEmpty()
+  drop: DateTimeDto;
+
+  @ValidateIf((o) => o.plan_type === 3) // 3 for monthly
   @IsNumber()
   @IsOptional()
-  duration_months: number; // applicable only for monthly plans
+  duration_months: number;
 
+  @IsNumber()
   @IsNotEmpty()
-  plan_type: 'daily' | 'weekly' | 'monthly'; // usage type to control logic
+  plan_type: number; // 1 = daily, 2 = weekly, 3 = monthly
+
+  @IsNumber()
+  collection_charges:number;
+
+  @IsNumber()
+  delivery_charges:number;
+
+  @IsNumber()
+  extra_charges:number;
+
+  @IsBoolean()
+  is_home_page:boolean;
 }
-
-
