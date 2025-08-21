@@ -164,7 +164,7 @@ export class MailService {
               <span class="label">Grand Total:</span> ${data.grandTotal} ${data.currency}
             </div>
 
-          <div class="section"><span class="label">Contact Number:</span> ${data.contact}</div>
+          <div class="section"><span class="label">Contact Number:</span> ${data.contactCode}-${data.contact}</div>
           <p>If you have any questions or require assistance, please don't hesitate to contact us.</p>
 
           <div class="footer">
@@ -318,6 +318,7 @@ export class MailService {
             <div class="section">
               <span class="label">Grand Total:</span> ${data.grandTotal} ${data.currency}
             </div>
+            <div class="section"><span class="label">Contact Number:</span> ${data.contactCode}-${data.contact}</div>
             <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
             <div class="footer">
               <p>Thank you for choosing WISE TRAVEL INDIA LIMITED.</p>

@@ -105,8 +105,8 @@ export class FinalReservation extends Document {
   @Prop({default: false}) isModifiedFlag: boolean;
   @Prop() user_documents_id: string;
   @Prop() feedback_collected: boolean;
-  @Prop() cancellation_reason: boolean;
-  @Prop() cancelled_by: boolean;
+  @Prop() cancellation_reason: string;
+  @Prop() cancelled_by: string;
   @Prop() cancel_time: Date;
 }
 
