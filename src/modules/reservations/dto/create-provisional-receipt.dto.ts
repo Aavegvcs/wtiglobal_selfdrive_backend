@@ -39,7 +39,7 @@ export class CreateProvisionalReceiptDto {
 
   @IsNumber()
   @IsNotEmpty()
-  baseRate: number;
+  baseFare: number;
 
   @IsNumber()
   @IsOptional()
@@ -64,10 +64,6 @@ export class CreateProvisionalReceiptDto {
   @IsNumber()
   @IsOptional()
   collectionCharge?: number;
-
-  @IsString()
-  @IsEnum(['AED'])
-  baseCurrency: string;
 
   @ValidateNested()
   @Type(() => CurrencyInfoDto)

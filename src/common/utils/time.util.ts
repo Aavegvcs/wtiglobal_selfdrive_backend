@@ -1,4 +1,4 @@
-import moment from "moment-timezone";
+import * as moment from "moment-timezone";
 
 function checkTime(i:any) : any {
     if (i < 10) {

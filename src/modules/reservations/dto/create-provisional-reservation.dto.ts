@@ -4,6 +4,7 @@ import { Vehicle } from 'src/modules/vehicles/schemas/vehicle.schema';
 import { PaymentType } from 'src/common/enums/payment-type.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { RentalType } from 'src/common/enums/rental-type.enum';
+import { PaymentGatewayUsed } from 'src/common/enums/payment-gateway.enum';
 
 export class DiscountDto {
   @IsOptional()
@@ -98,13 +99,14 @@ export class CreateProvisionalReservationDto {
   stripeCustomerId?: string;
 
   @IsString()
+  @IsOptional()
   paymentId: string;
 
   @IsOptional()
   @IsString()
   finalPaymentId?: string;
 
-  @IsEnum(['0', '1'])
+  @IsEnum(PaymentGatewayUsed)
   @IsNotEmpty() // 0 for stripe, 1 for razorpay
   paymentGatewayUsed: string;
 

@@ -9,6 +9,7 @@ import { User, UserSchema } from '../users/schemas/user.schema';
 import { FinalReservation, FinalReservationSchema } from './schemas/final-reservation.schema';
 import { FinalReceipt, FinalReceiptSchema } from './schemas/final-receipt.schema';
 import { PaymentGatewayModule } from '../payment-gateway/payment-gateway.module';
+import { MailModule } from '../mails/mail.module';
 
 @Module({
   imports: [
@@ -18,9 +19,11 @@ import { PaymentGatewayModule } from '../payment-gateway/payment-gateway.module'
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     MongooseModule.forFeature([{ name: FinalReservation.name, schema: FinalReservationSchema }]),
     MongooseModule.forFeature([{ name: FinalReceipt.name, schema: FinalReceiptSchema }]),
-    PaymentGatewayModule
+    PaymentGatewayModule,
+    MailModule
   ],
   controllers: [ReservationController],
   providers: [ReservationService],
+  exports: [ReservationService],
 })
 export class ReservationModule {}

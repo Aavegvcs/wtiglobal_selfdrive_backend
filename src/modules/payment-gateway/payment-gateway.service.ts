@@ -4,6 +4,7 @@ import { standardResponse } from 'src/common/helpers/response.helper';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { CheckoutSessionDto } from './dto/checkout-session.dto';
 import Stripe from 'stripe';
+import { StripeCustomerDto } from './dto/stripe-customer.dto';
 const Razorpay = require('razorpay');
 
 @Injectable()
@@ -16,8 +17,8 @@ export class PaymentGatewayService {
 
   constructor(private readonly configService: ConfigService) {
     this.razorpay = new Razorpay({
-      key_id: configService.get<string>('RAZOR_PAY_KEY_ID'),
-      key_secret: configService.get<string>('RAZOR_PAY_KEY_SECRET'),
+      key_id: configService.get<string>('RAZORPAY_KEY_ID'),
+      key_secret: configService.get<string>('RAZORPAY_KEY_SECRET'),
     });
     this.stripe = new Stripe(configService.get<string>('STRIPE_SECRET_KEY')!);
   }
@@ -100,6 +101,57 @@ export class PaymentGatewayService {
           'Unable to create order for stripe - createCheckoutSession',
           HttpStatus.INTERNAL_SERVER_ERROR,
         );
+    }
+  }
+
+  async createStripeCustomer(data: StripeCustomerDto) {
+    try {
+      const customerData: Stripe.CustomerCreateParams = {
+        name: data.name,
+        phone: data.phone,
+        email: data.email,
+        address: {
+          line1: data.address.line1,
+          postal_code: data.address.postal_code,
+          city: data.address.city,
+          country: data.address.country,
+        },
+      };
+
+      // 🔎 Check if customer already exists
+      const existingCustomers = await this.stripe.customers.list({ email: data.email });
+
+      if (existingCustomers.data.length > 0) {
+        this.logger.log(`Customer exists for email: ${data.email}`);
+        return {
+          customerExists: true,
+          customerCreated: false,
+          customerID: existingCustomers.data[0].id,
+        };
+      }
+
+      // 🆕 Create new customer
+      const customer = await this.stripe.customers.create(customerData);
+
+      if (customer) {
+        this.logger.log(`Customer created successfully: ${customer.id}`);
+        return {
+          customerExists: false,
+          customerCreated: true,
+          customerID: customer.id,
+        };
+      } else {
+        this.logger.error(`Unable to create customer for email: ${data.email}`);
+        return {
+          customerExists: false,
+          customerCreated: false,
+          result: 'unable to create customer',
+          customerID: null
+        };
+      }
+    } catch (error) {
+      this.logger.error(`Error creating customer: ${error.message}`, error.stack);
+      throw new HttpException(`Unable to create customer API   ${error}`, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }

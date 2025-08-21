@@ -30,7 +30,7 @@ export class MailerService {
     bcc?: string;
   }) {
     return this.transporter.sendMail({
-      from: this.configService.get<string>('MAIL_USER'),
+      from: `"Team WTi" <${this.configService.get<string>('MAIL_USER')}>`,
       to,
       cc,
       bcc,

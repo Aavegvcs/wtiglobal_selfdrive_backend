@@ -11,7 +11,7 @@ export class ProvisionalReceipt extends Document {
   order_reference_number: string;
 
   @Prop({required: true}) 
-  baseRate: number;
+  baseFare: number;
 
   @Prop({default: 0}) 
   totalTax: number;

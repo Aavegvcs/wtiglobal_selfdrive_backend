@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Param, Post, Res } from "@nestjs/common";
 import { ReservationService } from "./reservation.service";
-import { CreateProvisionalReservationDto } from "./dto/create-provisional-reservation.dto";
 import { Response } from "express";
 import { WrapperReservationDto } from "./dto/wrapper-reservation.dto";
 import { FinalReservationDto } from "./dto/create-final-reservation.dto";

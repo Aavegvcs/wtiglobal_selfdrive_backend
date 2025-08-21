@@ -9,6 +9,7 @@ import { ReservationStatusEnum } from 'src/common/enums/reservation-status.enum'
 import { PartnerName } from 'src/common/enums/partner-name.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { RentalType } from 'src/common/enums/rental-type.enum';
+import { PaymentGatewayUsed } from 'src/common/enums/payment-gateway.enum';
 
 @Schema({ timestamps: true, collection: 'sd_provisional_reservations' })
 export class ProvisionalReservation extends Document {
@@ -81,13 +82,13 @@ export class ProvisionalReservation extends Document {
   @Prop({ default: null })
   stripeCustomerId: string;
 
-  @Prop({ required: true })
+  @Prop({ default: null })
   paymentId: string;
 
   @Prop({ default: null })
   finalPaymentId: string;
 
-  @Prop({ enum: PaymentType, required: true }) // 0 for stripe, 1 for razorpay
+  @Prop({ enum: PaymentGatewayUsed, required: true }) // 0 for stripe, 1 for razorpay
   paymentGatewayUsed: string;
 
   @Prop({
