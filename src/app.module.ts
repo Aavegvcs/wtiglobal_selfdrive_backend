@@ -14,6 +14,7 @@ import { CarRentalLocationsModule } from './modules/car-rental-locations/car-ren
 import { ContactUsModule } from './modules/contact-us/contact-us.module';
 import { FaqModule } from './modules/faq/faq.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
+import { DeliveryCollectionRateModule } from './modules/delivery-collection-rates/delivery-collection-rates.module';
 
 @Module({
   imports: [
@@ -44,7 +45,8 @@ import { WebhookModule } from './modules/webhook/webhook.module';
     CarRentalLocationsModule,
     ContactUsModule,
     FaqModule,
-    WebhookModule
+    WebhookModule,
+    DeliveryCollectionRateModule
   ],
   controllers: [AppController],
   providers: [AppService],
