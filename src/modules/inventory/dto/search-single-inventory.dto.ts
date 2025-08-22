@@ -1,76 +1,113 @@
 import {
-  IsMongoId,
-  IsNotEmpty,
-  IsOptional,
-  IsNumber,
-  ValidateIf,
-  IsString,
-  ValidateNested,
-  IsBoolean
+  IsMongoId, IsNotEmpty, IsOptional, IsNumber, ValidateIf, IsString,
+  ValidateNested, IsBoolean, IsIn
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
-class LocationDto {
-  @IsString()
-  @IsNotEmpty()
+// Optional: still useful elsewhere, but NOT needed if you keep @Transform below
+import { PipeTransform, Injectable, BadRequestException } from '@nestjs/common';
+
+@Injectable()
+export class ParseJsonPipe implements PipeTransform {
+  transform(value: unknown) {
+    if (typeof value !== 'string') return value;
+    try { return JSON.parse(value); }
+    catch { throw new BadRequestException('Invalid JSON in query param.'); }
+  }
+}
+
+export class LocationDto {
+  @IsString() @IsNotEmpty()
   city: string;
 
   @IsMongoId()
   countryId: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   countryCode: string;
 }
 
-class DateTimeDto {
-  @IsString()
-  @IsNotEmpty()
+export class DateTimeDto {
+  @IsString() @IsNotEmpty()
   date: string; // "DD/MM/YYYY"
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString() @IsNotEmpty()
   time: string; // "HH:mm"
 }
 
 export class SearchSinglePricingDto {
-
-   @IsMongoId()
+  @IsMongoId()
   vehicle_id: string;
 
-  @ValidateNested()
-  @Type(() => LocationDto)
-  @IsNotEmpty()
-  source: LocationDto;
+  // Source
+@Transform(({ obj }) => {
+    const raw = obj?.drop;
+    if (typeof raw === 'string' && raw.trim()) {
+      try { return JSON.parse(raw); } catch {}
+    }
+    return raw;
+  }, { toClassOnly: true })
+@ValidateNested()
+@Type(() => LocationDto)
+@IsNotEmpty()
+source: LocationDto;
 
-  @ValidateNested()
-  @Type(() => DateTimeDto)
-  @IsNotEmpty()
-  pickup: DateTimeDto;
+// Pickup
+@Transform(({ obj }) => {
+    const raw = obj?.drop;
+    if (typeof raw === 'string' && raw.trim()) {
+      try { return JSON.parse(raw); } catch {}
+    }
+    return raw;
+  }, { toClassOnly: true })
+@ValidateNested()
+@Type(() => DateTimeDto)
+@IsNotEmpty()
+pickup: DateTimeDto;
 
-  @ValidateNested()
-  @Type(() => DateTimeDto)
-  @IsNotEmpty()
-  drop: DateTimeDto;
+// Drop
+@Transform(({ obj }) => {
+    const raw = obj?.drop;
+    if (typeof raw === 'string' && raw.trim()) {
+      try { return JSON.parse(raw); } catch {}
+    }
+    return raw;
+  }, { toClassOnly: true })
+@ValidateNested()
+@Type(() => DateTimeDto)
+@IsNotEmpty()
+drop: DateTimeDto;
 
-  @ValidateIf((o) => o.plan_type === 3) // 3 for monthly
+  // 1 = daily/weekly, 2 = monthly
+  @Transform(({ value }) => Number(value))
+  @IsNumber()
+  @IsIn([1, 2])
+  @IsNotEmpty()
+  plan_type: number;
+
+  // Only applicable for monthly (plan_type === 2)
+  @ValidateIf(o => Number(o.plan_type) === 2)
+  @Transform(({ value }) => (value !== undefined ? Number(value) : undefined))
   @IsNumber()
   @IsOptional()
-  duration_months: number;
+  duration_months?: number;
 
-  @IsNumber()
-  @IsNotEmpty()
-  plan_type: number; // 1 = daily, 2 = weekly, 3 = monthly
+  // Charges default to 0 when omitted
+  @Transform(({ value }) => (value !== undefined ? Number(value) : 0))
+  @IsNumber() @IsOptional()
+  collection_charges?: number;
 
-  @IsNumber()
-  collection_charges:number;
+  @Transform(({ value }) => (value !== undefined ? Number(value) : 0))
+  @IsNumber() @IsOptional()
+  delivery_charges?: number;
 
-  @IsNumber()
-  delivery_charges:number;
+  @Transform(({ value }) => (value !== undefined ? Number(value) : 0))
+  @IsNumber() @IsOptional()
+  extra_charges?: number;
 
-  @IsNumber()
-  extra_charges:number;
-
+  // Accept "true"/"false" or boolean
+  @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : !!value))
   @IsBoolean()
-  is_home_page:boolean;
+  @IsOptional()
+  is_home_page?: boolean;
 }

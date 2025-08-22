@@ -16,11 +16,12 @@ async function bootstrap() {
   });
 
   app.useGlobalFilters(new AllExceptionsFilter());
+  
 
   app.useGlobalPipes(
     new ValidationPipe({
-      transform: false, // don't convert types
-      // whitelist: true,  // remove extra fields not in DTO
+      transform: true, // don't convert types
+      whitelist: true,  // remove extra fields not in DTO
       // forbidNonWhitelisted: true, // throw error on extra fields
     }),
   );
