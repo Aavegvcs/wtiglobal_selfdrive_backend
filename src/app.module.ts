@@ -13,6 +13,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import { CarRentalLocationsModule } from './modules/car-rental-locations/car-rental-locations.module';
 import { ContactUsModule } from './modules/contact-us/contact-us.module';
 import { FaqModule } from './modules/faq/faq.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 
 @Module({
   imports: [
@@ -42,7 +43,8 @@ import { FaqModule } from './modules/faq/faq.module';
     InventoryModule,
     CarRentalLocationsModule,
     ContactUsModule,
-    FaqModule
+    FaqModule,
+    WebhookModule
   ],
   controllers: [AppController],
   providers: [AppService],

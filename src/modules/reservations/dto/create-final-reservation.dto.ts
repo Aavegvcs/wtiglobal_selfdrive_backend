@@ -15,7 +15,4 @@ export class FinalReservationDto {
   @IsOptional()
   @IsString()
   razorpayOrderId?: string;
-
-  @IsEnum(RentalType)
-  rentalType: string;
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Type } from '@nestjs/common';
 import { MailerService } from 'src/common/utils/mailer.util';
 import { FinalReservation } from '../reservations/schemas/final-reservation.schema';
 import { FinalReceipt } from '../reservations/schemas/final-receipt.schema';
@@ -7,19 +7,23 @@ import { Vehicle } from '../vehicles/schemas/vehicle.schema';
 import { convertUtcToTimezone } from 'src/common/utils/time.util';
 import { CreateContactUsDto } from '../contact-us/dto/create-contact-us.dto';
 import { ConfigService } from '@nestjs/config';
+import { PaymentType } from 'src/common/enums/payment-type.enum';
 
 const logger = new Logger('MailService');
 
 @Injectable()
 export class MailService {
-
   constructor(
     private readonly mailerService: MailerService, // You can inject a wrapper for nodemailer here
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
 
 
-  async sendOtpToMail(emailID: string, name: string, otp: number): Promise<boolean> {
+  async sendOtpToMail(
+    emailID: string,
+    name: string,
+    otp: number,
+  ): Promise<boolean> {
     try {
       const subject = 'Team WTi - One Time Password';
 
@@ -47,7 +51,7 @@ export class MailService {
         html,
       });
 
-      logger.log(`Successfully sent mail to ${emailID.toLowerCase()}`)
+      logger.log(`Successfully sent mail to ${emailID.toLowerCase()}`);
       return true;
     } catch (error) {
       logger.error('Error sending OTP mail', error.stack);
@@ -55,59 +59,22 @@ export class MailService {
     }
   }
 
-  async sendConfirmationEmail(
-    mailData: {
-      reservation: FinalReservation;
-      invoiceData: FinalReceipt;
-      vehicle: Vehicle;
-      user: User;
-      extrasSelected: Array<Object> | string;
-    },
-    paymentId: string,
-    isOffer: boolean = false,
-  ): Promise<boolean> {
+  async sendConfirmationEmail(data: any): Promise<boolean> {
     try {
-      const { reservation, invoiceData, user, extrasSelected, vehicle } = mailData;
-      const currencyName = invoiceData.currencyInfo?.currency;
-      const currencyPrice = invoiceData.currencyInfo?.currencyRate ?? 1;
-
-      const startTime = convertUtcToTimezone(String(reservation.pickupDate), reservation.timezone);
-      const endTime = convertUtcToTimezone(String(reservation.dropDate), reservation.timezone);
-
-      const carModel = vehicle?.model_name;
-      const carType = vehicle?.specs.Model;
-
+      
       let paymentType = '';
-      switch (reservation.paymentType) {
-        case 'FULL':
+      switch (data.paymentType) {
+        case PaymentType.FULL:
           paymentType = '(Full payment)';
           break;
-        case 'PART':
+        case PaymentType.PART:
           paymentType = '(Partial payment)';
           break;
       }
 
 
-      
-
-       const priceLine = (label: string, amount: number) =>
-      `<div><span class="label">${label}:</span> ${(amount * currencyPrice).toFixed(2)} ${currencyName}</div>`;
-
-    const offerLines = isOffer
-      ? `
-        ${priceLine('Offer Base Rate', invoiceData.baseRate)}
-        ${priceLine('Actual Base Rate', invoiceData.baseRate + invoiceData.discount)}
-        ${priceLine('Offer Discount', invoiceData.discount)}
-      `
-      : priceLine('Base Rate', invoiceData.baseRate);
-
-    const discountLine = !isOffer ? priceLine('Discount', invoiceData.discount) : '';
-
- 
-
-    
-    const subject = `Booking Confirmation - ${reservation.order_reference_number}`;
-    const html =  `
+      const subject = `Booking Confirmation - ${data.order_reference_number}`;
+      const html = `
       <!DOCTYPE html>
       <html><head>
       <style>
@@ -160,29 +127,44 @@ export class MailService {
       </head>
       <body>
         <div class="container">
-          <div class="header">Dear <b>${user.firstName}</b>,</div>
+          <div class="header">Dear <b>${data.firstName}</b>,</div>
           <p>We are pleased to confirm your car rental booking with us. Here are your reservation details:</p>
 
-          <div class="section"><span class="label">Reservation Id:</span> ${reservation.order_reference_number}</div>
-          <div class="section"><span class="label">Payment Id:</span> ${paymentId}</div>
-          <div class="section"><span class="label">Booking Status:</span> Confirmed</div>
-          <div class="section"><span class="label">Booking Period:</span> From ${startTime} to ${endTime}</div>
-          <div class="section"><span class="label">Pick-up Location:</span> ${reservation.pickupLocation}</div>
-          <div class="section"><span class="label">Drop-off Location:</span> ${reservation.dropLocation}</div>
-          <div class="section"><span class="label">Vehicle:</span> ${carType}</div>
-          <div class="section"><span class="label">Addons Selected:</span> ${extrasSelected}</div>
+          <div class="section">
+              <span class="label">Reservation Number:</span> ${data.order_reference_number}
+            </div>
+            <div class="section">
+              <span class="label">Rental Type:</span> ${data.rentalType}
+            </div>
+            <div class="section">
+              <span class="label">Pickup Time:</span> ${data.pickupDate}
+            </div>
+            <div class="section">
+              <span class="label">Drop Time:</span> ${data.dropDate}
+            </div>
+            <div class="section">
+              <span class="label">Pickup Location:</span> ${data.pickupLocation}
+            </div>
+            <div class="section">
+              <span class="label">Drop Location:</span> ${data.dropLocation}
+            </div>
+            <div class="section">
+              <span class="label">Vehicle:</span> ${data.vehicle}
+            </div>
+            <div class="section">
+              <span class="label">Extras Selected:</span> ${data.extrasSelected}
+            </div>
+            <div class="section">
+              <span class="label">Base Fare:</span> ${data.baseFare} ${data.currency}
+            </div>
+            <div class="section">
+              <span class="label">Discount:</span> ${data.discount} ${data.currency}
+            </div>
+            <div class="section">
+              <span class="label">Grand Total:</span> ${data.grandTotal} ${data.currency}
+            </div>
 
-          <div class="section"><span class="label">Price Breakup:</span></div>
-          <div class="section" style="margin-left: 20px;">
-            ${offerLines}
-            ${priceLine('Addons Charges', invoiceData.addOns)}
-            ${priceLine('Total Tax (5% VAT)', invoiceData.totalTax)}
-            ${priceLine('Grand Total', invoiceData.totalFare)} ${paymentType}
-            ${discountLine}
-            ${priceLine('Due Amount', invoiceData.amount_to_be_collected)}
-          </div>
-
-          <div class="section"><span class="label">Contact Number:</span> ${user.contact}</div>
+          <div class="section"><span class="label">Contact Number:</span> ${data.contactCode}-${data.contact}</div>
           <p>If you have any questions or require assistance, please don't hesitate to contact us.</p>
 
           <div class="footer">
@@ -195,23 +177,22 @@ export class MailService {
       </html>`;
 
       await this.mailerService.mailSender({
-        to: user.emailID.toLowerCase(),
+        to: data.emailID.toLowerCase(),
         subject,
         html,
       });
 
-      logger.log(`Booking confirmation mail sent to ${user.emailID}`);
+      logger.log(`Booking confirmation mail sent to ${data.emailID}`);
       return true;
-
     } catch (error) {
-      logger.error(`Failed to send booking confirmation mail: ${error.message}`, error.stack);
+      logger.error(
+        `Failed to send booking confirmation mail: `, error.stack,
+      );
       return false;
     }
   }
 
-  
   async sendMailToWti(data: CreateContactUsDto) {
-
     const toMail: string = this.configService.get<string>('MAIL_USER')!;
     const subject = 'Self Drive: Feedback from user';
     const html = `
@@ -241,4 +222,127 @@ export class MailService {
     });
   }
 
+  async sendCancellationMail(
+    data: any
+  ): Promise<boolean> {
+    try {
+      const subject = `Cancellation for ${data.order_reference_number}`;
+      let isRefundable: boolean = true;
+
+      const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              padding: 20px;
+            }
+            .container {
+              max-width: 600px;
+              margin: auto;
+              border: 1px solid #ddd;
+              padding: 20px;
+              border-radius: 8px;
+            }
+            .header {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 20px;
+              color: #2c3e50;
+            }
+            .section {
+              margin: 10px 0;
+            }
+            .section .label {
+              font-weight: bold;
+              color: #474242;
+            }
+            .footer {
+              margin-top: 20px;
+              font-size: 14px;
+              color: #777;
+            }
+            .footer a {
+              color: #3498db;
+              text-decoration: none;
+            }
+            .footer a:hover {
+              text-decoration: underline;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">Dear <b>${data.firstName}</b>,</div>
+            <p>
+              We are writing to confirm that your self-drive reservation <b>${data.order_reference_number}</b> has been cancelled.
+              ${
+                isRefundable
+                  ? `A refund of <b>${data.amountPaid} ${data.currency}</b> has been initiated and will be credited to your account within <b>5 to 7 working days</b>.`
+                  : `No refund will be processed as the booking was cancelled less than the refundable time window.`
+              }
+            </p>
+            <div class="section">
+              <span class="label">Reservation Number:</span> ${data.order_reference_number}
+            </div>
+            <div class="section">
+              <span class="label">Rental Type:</span> ${data.rentalType}
+            </div>
+            <div class="section">
+              <span class="label">Pickup Time:</span> ${data.pickupDate}
+            </div>
+            <div class="section">
+              <span class="label">Drop Time:</span> ${data.dropDate}
+            </div>
+            <div class="section">
+              <span class="label">Pickup Location:</span> ${data.pickupLocation}
+            </div>
+            <div class="section">
+              <span class="label">Drop Location:</span> ${data.dropLocation}
+            </div>
+            <div class="section">
+              <span class="label">Vehicle:</span> ${data.vehicle}
+            </div>
+            <div class="section">
+              <span class="label">Extras Selected:</span> ${data.extrasSelected}
+            </div>
+            <div class="section">
+              <span class="label">Base Fare:</span> ${data.baseFare} ${data.currency}
+            </div>
+            <div class="section">
+              <span class="label">Discount:</span> ${data.discount} ${data.currency}
+            </div>
+            <div class="section">
+              <span class="label">Grand Total:</span> ${data.grandTotal} ${data.currency}
+            </div>
+            <div class="section"><span class="label">Contact Number:</span> ${data.contactCode}-${data.contact}</div>
+            <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
+            <div class="footer">
+              <p>Thank you for choosing WISE TRAVEL INDIA LIMITED.</p>
+              <p><b>Best regards,</b><br>
+                Reservations Team<br>
+                011-45434500, 9250057902<br>
+                info@wti.co.in<br>
+                Wise Travel India Ltd.<br>
+                <a href="https://www.wticabs.com">www.wticabs.com</a>
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+      // You should send the mail here, e.g.:
+      await this.mailerService.mailSender({ to: data.emailID, subject, html });
+
+      logger.log("Cancellation mail sent successfully.")
+      return true;
+    } catch (error) {
+      logger.error('Error sending cancellation mail', error?.stack);
+      return false
+    }
+  }
 }

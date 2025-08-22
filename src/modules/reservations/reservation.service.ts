@@ -12,6 +12,12 @@ import { FinalReservation } from './schemas/final-reservation.schema';
 import { FinalReceipt } from './schemas/final-receipt.schema';
 import { FinalReservationDto } from './dto/create-final-reservation.dto';
 import { PaymentGatewayService } from '../payment-gateway/payment-gateway.service';
+import { CancelReservationDto } from './dto/cancel-reservation.dto';
+import { ReservationStatusEnum } from 'src/common/enums/reservation-status.enum';
+import { getExtrasNamesFromArray } from 'src/common/utils/getExtrasNames.util';
+import { convertUtcToTimezone } from 'src/common/utils/time.util';
+import { MailService } from '../mails/mail.service';
+import { StripeCustomerDto } from '../payment-gateway/dto/stripe-customer.dto';
 
 const logger = new Logger('ReservationService');
 
@@ -25,6 +31,7 @@ export class ReservationService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Extras.name) private extrasModel: Model<Extras>,
     private readonly paymentGatewayService: PaymentGatewayService, 
+    private readonly mailService: MailService
   ) {}
 
   
@@ -44,6 +51,58 @@ export class ReservationService {
         const order_reference_number = `ORD${Date.now()}`
         const receiptId = `REC${Date.now()}`
 
+
+      console.log('----------------------- creating order/session -----------------------------')
+      
+      let orderData: any = null;
+      let stripeCustomer: any = null;
+      // If payment gateway is Razorpay, create an order
+
+      if(String(reservation.paymentGatewayUsed) == '1') {
+        orderData = await this.paymentGatewayService.createOrder(
+          {
+            amount: receipt.totalFare, 
+            currency: receipt.currencyInfo.currency,
+            receiptID: receiptId,
+            notes: {
+              message: `Self Drive Reservation Order ${order_reference_number} for user ${reservation.user_id}`,
+            }
+          }
+        )
+
+        orderData = orderData?.result || null;
+      } else if(String(reservation.paymentGatewayUsed) == '0') {
+
+        const user: any = await this.userModel.findById(reservation.user_id);
+
+        console.log("user123", user); 
+
+        stripeCustomer = await this.paymentGatewayService.createStripeCustomer({
+          name: user.firstName,
+          phone: user.contact,
+          email: user.emailID,
+          address: {
+            line1: "D-21, Corporate Park",
+            postal_code: "123456",
+            city: "UAE",
+            country: "UAE"
+          }
+        })
+
+        orderData = await this.paymentGatewayService.createCheckoutSession({
+          amount: receipt.totalFare,
+          currency: receipt.currencyInfo.currency,
+          customerId: stripeCustomer.customerID ?? '',
+          receiptId: receiptId,
+          order_reference_number: order_reference_number,
+          userType: reservation.userType,
+        })
+      }
+
+      console.log('orderData', orderData)
+      
+      console.log('--------------------- order created --------------------------')
+
         // Calculate rental days
         const pickupDate = moment(reservation.pickupDate);
         const dropDate = moment(reservation.dropDate);
@@ -58,14 +117,13 @@ export class ReservationService {
         const receiptResult = new this.provisionalReceiptModel({
             receiptId: receiptId, // required
             order_reference_number: order_reference_number, 
-            baseRate: receipt.baseRate, // required
+            baseFare: receipt.baseFare, // required
             totalTax: receipt.totalTax ?? 0, // matches `totalTax` in schema
             addOns: receipt.addOns ?? 0,
             insuranceCharge: receipt.insuranceCharge ?? 0,
             securityDeposit: receipt.securityDeposit ?? 0,
             deliveryCharge: receipt.deliveryCharge ?? 0,
             collectionCharge: receipt.collectionCharge ?? 0,
-            baseCurrency: receipt.baseCurrency, // 'INR' | 'USD' | 'AED'
 
             currencyInfo: {
                 currency: receipt.currencyInfo?.currency,
@@ -105,6 +163,7 @@ export class ReservationService {
             receipt_ref_id: receiptResult._id,
             invoice_id: reservation.invoice_id ?? null,
             userType: reservation.userType || 'CUSTOMER',
+            rentalType: reservation.rentalType,
             user_id: new Types.ObjectId(reservation.user_id),
             partnerName: reservation.partnerName || 'WTI',
             pickupLocation: reservation.pickupLocation,
@@ -115,11 +174,11 @@ export class ReservationService {
             vehicle_id: new Types.ObjectId(vehicleId),
             sku_id: reservation.sku_id,
             extrasSelected: reservation.extrasSelected?.map((id) => new Types.ObjectId(id)) || [],
-            reservationStatus: 'HOLD',
+            reservationStatus: ReservationStatusEnum.HOLD,
             paymentType: reservation.paymentType,
             razorpayOrderId: reservation.razorpayOrderId ?? null,
-            stripeCustomerId: reservation.stripeCustomerId ?? null,
-            paymentId: reservation.paymentId,
+            stripeCustomerId: stripeCustomer.customerID ?? null,
+            paymentId: null,
             finalPaymentId: reservation.finalPaymentId ?? null,
             paymentGatewayUsed: reservation.paymentGatewayUsed,
             discount: {
@@ -133,38 +192,7 @@ export class ReservationService {
 
       await reservationResult.save();
 
-      console.log('----------------------- finally creating order/session -----------------------------')
-      
-      let orderData: any = null;
-      // If payment gateway is Razorpay, create an order
 
-      if(String(reservation.paymentGatewayUsed) == '1') {
-        orderData = await this.paymentGatewayService.createOrder(
-          {
-            amount: receipt.totalFare, 
-            currency: receipt.currencyInfo.currency,
-            receiptID: receiptId,
-            notes: {
-              message: `Self Drive Reservation Order ${order_reference_number} for user ${reservation.user_id}`,
-            }
-          }
-        )
-
-        orderData = orderData?.result || null;
-      } else if(String(reservation.paymentGatewayUsed) == '0') {
-        orderData = await this.paymentGatewayService.createCheckoutSession({
-          amount: receipt.totalFare,
-          currency: receipt.currencyInfo.currency,
-          customerId: reservation.stripeCustomerId ?? '',
-          receiptId: receiptId,
-          order_reference_number: order_reference_number,
-          userType: reservation.userType,
-        })
-      }
-
-      console.log('orderData', orderData)
-      
-      console.log('--------------------- order created --------------------------')
 
       return standardResponse(true, 'Provisional reservation and receipt created', 201, {
         reservation_id: reservationResult._id,
@@ -180,11 +208,16 @@ export class ReservationService {
         reservationCreated: false,
         receiptCreated: false,
         orderData: null
-        }, error, '/reservation/createProvisionalReservation');
+        }, error.stack, '/reservation/createProvisionalReservation');
     }
   }
 
   async makeFinalReservation(finalReservationDto : FinalReservationDto): Promise<any> {
+    let isWhatsappSent :boolean = false;
+    let isMailSent :boolean = false;
+    let FinalReservationCreated :boolean = false;
+    let FinalReceiptCreated :boolean = false;
+
     try {
 
       const {
@@ -194,8 +227,6 @@ export class ReservationService {
         razorpayOrderId,
       } = finalReservationDto;
 
-        let isWhatsappConfirmationSent :boolean = false;
-        let isMailSent :boolean = false;
 
         console.log('-------------------------------------------------------------------')
         console.log(`makeFinalReservation function with req.body: ${order_reference_number}`);
@@ -207,7 +238,7 @@ export class ReservationService {
       // Get provisional reservation and receipt then create final from it
       // --------------------------------------------------------------------------------
 
-      let provisionalReservation = await this.provisionalReservationModel
+      let provisionalReservation: any = await this.provisionalReservationModel
       .findOne({order_reference_number: order_reference_number})
       .populate([
         { path: 'user_id' },
@@ -223,8 +254,10 @@ export class ReservationService {
       
       if (!provisionalReceipt) throw new Error('Provisional receipt not found');
       
-      // const extrasSelectedNames = provisionalReservation.extrasSelected?.map((e) => e.name).join(', ') ?? 'No extras selected';
-      // const extrasSelectedIds = provisionalReservation.extrasSelected?.map((e) => e._id) ?? [];
+      // get names of extras selected
+      const extrasSelected = getExtrasNamesFromArray(provisionalReservation.extrasSelected);
+      
+      const extrasSelectedIds = provisionalReservation.extrasSelected?.map((e) => e._id) ?? [];
 
       
 
@@ -232,12 +265,14 @@ export class ReservationService {
         // Create final receipt first to save _id in reservation
         // --------------------------------------------------------------------------------
 
-        const receiptResult = new this.finalReceiptModel({
+        const receiptResult: any = new this.finalReceiptModel({
             ...provisionalReceipt
         });
 
         await receiptResult.save();
         logger.log('Final receipt created with ID:', receiptResult._id);
+        
+        FinalReceiptCreated = true
 
         // --------------------------------------------------------------------------------
         // Create final reservation and update the receipt _id in reservation
@@ -245,8 +280,9 @@ export class ReservationService {
 
         const reservationResult = new this.finalReservationModel({
             ...provisionalReservation,
+            extrasSelected: extrasSelectedIds,
             receipt_ref_id: receiptResult._id,
-            reservationStatus: 'CONFIRMED',
+            reservationStatus: ReservationStatusEnum.CONFIRMED,
             razorpayOrderId: razorpayOrderId ?? null,
             stripeCustomerId: stripeCustomerId ?? null,
             paymentId: paymentId, 
@@ -254,21 +290,53 @@ export class ReservationService {
 
         await reservationResult.save();
         logger.log('Final reservation created with ID:', reservationResult._id);
+        
+        FinalReservationCreated = true;
 
-        // sendConfirmationEmail()
+        // creating mail and whatsapp packet   
+
+        const confirmationDataPacket = {
+        contact: `${provisionalReservation.user_id.contactCode}${provisionalReservation.user_id.contact}`,
+        firstName: provisionalReservation.user_id.firstName,
+        emailID: provisionalReservation.user_id.emailID,
+        order_reference_number: provisionalReservation.order_reference_number,
+        paymentId: paymentId,
+        extrasSelected: extrasSelected,
+        reservationStatus: reservationResult.reservationStatus,
+        // start_time: convertUtcToTimezone(String(reservation.pickupDate), reservation.timezone),
+        pickupDate: convertUtcToTimezone(String(provisionalReservation.pickupDate), provisionalReservation.timezone), 
+        dropDate: convertUtcToTimezone(String(provisionalReservation.dropDate), provisionalReservation.timezone),
+        pickupLocation: provisionalReservation.pickupLocation,
+        dropLocation: provisionalReservation.dropLocation,
+        rentalType: provisionalReservation.rentalType,
+        vehicle: provisionalReservation.vehicle_id?.title ?? '',
+        // carCategoryName: reservation.vehicle_details?.model ?? '',
+        baseFare: (receiptResult.baseFare * receiptResult.currencyInfo.currencyRate).toFixed(2),
+        currency: receiptResult.currencyInfo.currency,
+        tax: 0,
+        amountPaid: (receiptResult.amountPaid * receiptResult.currencyInfo.currencyRate).toFixed(2),
+        discount: (receiptResult.discount * receiptResult.currencyInfo.currencyRate).toFixed(2),
+        grandTotal: (receiptResult.totalFare * receiptResult.currencyInfo.currencyRate).toFixed(2),
+      };
+
+      isMailSent = await this.mailService.sendConfirmationEmail(confirmationDataPacket)
 
       return standardResponse(true, 'Final reservation and receipt created', 201, {
         reservation_id: reservationResult._id,
         order_reference_number: reservationResult.order_reference_number,
-        reservationCreated: true,
-        receiptCreated: true,
+        reservationCreated: FinalReservationCreated,
+        receiptCreated: FinalReceiptCreated,
+        isMailSent: isMailSent,
+        isWhatsappSent: isWhatsappSent,
         }, null, 'makeFinalReservation function'
       );
 
     } catch (error) {
       return standardResponse(false, 'Internal Server Error', 500, {
-        reservationCreated: false,
-        receiptCreated: false,
+        reservationCreated: FinalReservationCreated,
+        receiptCreated: FinalReceiptCreated,
+        isMailSent: false,
+        isWhatsappSent: false,
         }, error.stack, 'makeFinalReservation function');
     }
   }
@@ -282,7 +350,7 @@ export class ReservationService {
       return standardResponse(false, 'Internal Server Error', 500, {
         reservationCreated: false,
         receiptCreated: false,
-        }, error.stack, '/reservation/createFinalReservation');
+        }, error, '/reservation/createFinalReservation');
     }
   }
 
@@ -357,102 +425,83 @@ export class ReservationService {
     }
   }
 
-  // async cancelReservation(data: CancelChauffeurReservationDto) {
-  //   if (!data.id || !data.cancellation_reason || data.amount === undefined || data.payment_gateway_used === undefined) {
-  //     throw new BadRequestException('Missing required id or amount or cancellation_reason or payment_gateway_used!');
-  //   }
+  async cancelReservation(data: CancelReservationDto) {
+    let mailSent: boolean = false;
+    let whatsappSent: boolean = false;
+    let reservationCancelled: boolean = false;
 
-  //   let mailSent = false;
+    try {
+      const reservation: FinalReservation | null = await this.finalReservationModel
+        .findByIdAndUpdate(data.id, {
+          $set: {
+            reservationStatus: ReservationStatusEnum.CANCELLED,
+            cancellation_reason: data.cancellation_reason,
+            cancelled_by: data.cancelled_by,
+            cancel_time: new Date(),
+          },
+        })
+        .populate([
+          { path: 'receipt_ref_id' },
+          { path: 'extrasSelected' },
+          { path: 'user_id' },
+        ])
+        .lean().exec();
 
-  //   try {
-  //     const reservation = await this.finalReservationModel
-  //       .findByIdAndUpdate(data.id, {
-  //         $set: {
-  //           BookingStatus: 'CANCELLED',
-  //           cancellation_reason: data.cancellation_reason,
-  //           canceltime: new Date(),
-  //         },
-  //       })
-  //       .populate([
-  //         { path: 'reciept_id' },
-  //         { path: 'extrasSelected' },
-  //         { path: 'passenger' },
-  //       ])
-  //       .exec();
+      if (!reservation) {
+        throw new NotFoundException(`Reservation with ID ${data.id} not found`);
+      }
 
-  //     if (!reservation) {
-  //       throw new NotFoundException(`Reservation with ID ${data.id} not found`);
-  //     }
+      const receipt: any = reservation.receipt_ref_id;
+      const user: any = reservation.user_id
+      const extrasSelected: string = getExtrasNamesFromArray(reservation.extrasSelected);
+      const vehicle: any = reservation.vehicle_id;
 
-  //     if (data.payment_gateway_used === 1) {
-  //       if (!data.paymentId || !data.receiptId) {
-  //         throw new BadRequestException('Missing required paymentId or receiptId!');
-  //       }
 
-  //       const isSent = await this.sendChauffeurCancellationMail(
-  //         reservation,
-  //         data.paymentId,
-  //         data.amount,
-  //         data.receiptId,
-  //       );
-  //       mailSent = isSent.mailSent;
+      const cancellationDataPacket = {
+        recipient: `${user.contactCode}${user.contact}`,
+        firstName: user.firstName,
+        emailID: user.emailID,
+        order_reference_number: reservation.order_reference_number,
+        payment_id: reservation.paymentId,
+        extrasSelected: extrasSelected,
+        reservationStatus: reservation.reservationStatus,
+        // start_time: convertUtcToTimezone(String(reservation.pickupDate), reservation.timezone),
+        pickupDate: convertUtcToTimezone(String(reservation.dropDate), reservation.timezone), 
+        dropDrop: convertUtcToTimezone(String(reservation.dropDate), reservation.timezone),
+        pickupLocation: reservation.pickupLocation,
+        dropLocation: reservation.dropLocation,
+        rentalType: reservation.rentalType,
+        vehicle: vehicle?.title ?? '',
+        // carCategoryName: reservation.vehicle_details?.model ?? '',
+        baseFare: (receipt.baseFare * receipt.currencyInfo.currencyRate).toFixed(2),
+        currency: receipt.currencyInfo.currency,
+        tax: 0,
+        amountPaid: receipt.amountPaid,
+        discount: (receipt.discount * receipt.currencyInfo.currencyRate).toFixed(2),
+        grandTotal: (receipt.totalFare * receipt.currencyInfo.currencyRate).toFixed(2),
+      };
 
-  //       await sendCancellationPacketToPanel(
-  //         data.id,
-  //         reservation?.reference_number,
-  //         reservation?.order_reference_number,
-  //       );
+      mailSent = await this.mailService.sendCancellationMail(cancellationDataPacket);
 
-  //       return {
-  //         ReservationCancelled: true,
-  //         ID: data.id,
-  //         message: 'Chauffeur Reservation Cancelled Successfully',
-  //         mailSent,
-  //       };
-  //     } else {
-  //       let extrasSelected = reservation.extrasSelected;
-  //       if (extrasSelected?.length) {
-  //         extrasSelected = extrasSelected.map(extra => extra.name).join(', ');
-  //       }
+      return standardResponse(
+        true,
+        `Successfully cancelled final reservation for reservation ${data.id}`,
+        200,
+        { reservationCancelled: reservationCancelled, mailSent: mailSent, whatsappSent: whatsappSent },
+        null,
+        'reservation/cancelReservation',
+      );
 
-  //       const cancellationDataPacket = {
-  //         recipient: `${reservation.passenger.contactCode}${reservation.passenger.contact}`,
-  //         firstName: reservation.passenger.firstName,
-  //         emailID: reservation.passenger.emailID,
-  //         order_reference_number: reservation.order_reference_number,
-  //         payment_id: reservation.stripe_payment_id,
-  //         extrasSelected: extrasSelected?.length ? extrasSelected : 'No extras selected',
-  //         bookingStatus: reservation.BookingStatus,
-  //         start_time: reservation.start_time,
-  //         pickupAt: reservation.start_time, // convert to timezone in util
-  //         dropAt: reservation.trip_type_details.trip_type === 'ONE_WAY' ? reservation.end_time : '',
-  //         pickupLocation: reservation.source.address,
-  //         dropLocation: reservation?.destination?.address ?? 'NA',
-  //         tripType: `${reservation.trip_type_details.basic_trip_type} ${reservation.trip_type_details.trip_type}`,
-  //         distance: reservation.distance,
-  //         vehicle: reservation.vehicle_details?.title ?? '',
-  //         package: reservation.package ?? 'No package selected',
-  //         baseFare: (reservation.reciept_id.fare_details.base_fare * reservation.reciept_id.currency.currencyRate).toFixed(2),
-  //         currency: reservation.reciept_id.currency.currencyName,
-  //         tax: 0,
-  //         discount: (reservation.reciept_id.fare_details.seller_discount * reservation.reciept_id.currency.currencyRate).toFixed(2),
-  //         grandTotal: (reservation.reciept_id.fare_details.total_fare * reservation.reciept_id.currency.currencyRate).toFixed(2),
-  //         carCategoryName: reservation.vehicle_details?.model ?? '',
-  //       };
-
-  //       const isSent = await sendTACancellationEmail(cancellationDataPacket);
-  //       mailSent = isSent.mailSent;
-
-  //       return {
-  //         ReservationCancelled: true,
-  //         ID: data.id,
-  //         message: 'Chauffeur Reservation Cancelled Successfully',
-  //         mailSent,
-  //       };
-  //     }
-  //   } catch (error) {
-  //     return standardResponse(false, 'Internal Server Error', 500, null, error.stack,  "reservation/cancelReservation");
-  //   }
-  // }
+    } catch (error) {
+      return standardResponse(
+        false,
+        `Internal Server Error: ${data.id}`,
+        500,
+        { reservationCancelled: reservationCancelled, mailSent: mailSent, whatsappSent: whatsappSent },
+        error.stack,
+        'reservation/cancelReservation',
+      );
+    }
+  }
 
 }
