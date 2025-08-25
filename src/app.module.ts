@@ -15,6 +15,7 @@ import { ContactUsModule } from './modules/contact-us/contact-us.module';
 import { FaqModule } from './modules/faq/faq.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
 import { DeliveryCollectionRateModule } from './modules/delivery-collection-rates/delivery-collection-rates.module';
+import { GoogleApiModule } from './modules/google/google.module';
 
 @Module({
   imports: [
@@ -46,7 +47,8 @@ import { DeliveryCollectionRateModule } from './modules/delivery-collection-rate
     ContactUsModule,
     FaqModule,
     WebhookModule,
-    DeliveryCollectionRateModule
+    DeliveryCollectionRateModule,
+    GoogleApiModule
   ],
   controllers: [AppController],
   providers: [AppService],
