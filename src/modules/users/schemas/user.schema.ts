@@ -1,5 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { AuthTypeEnum } from 'src/common/enums/auth-type.enum';
+import { PlatformUsingEnum } from 'src/common/enums/platform-using.enum';
+import { ServiceUsingEnum } from 'src/common/enums/service-using.enum';
+import { UserRole } from 'src/common/enums/user-role.enum';
 
 export enum GenderEnum {
   MALE = 'MALE',
@@ -9,28 +13,6 @@ export enum GenderEnum {
   OTHERS = 'OTHERS',
 }
 
-export enum UserTypeEnum {
-  CUSTOMER = 'CUSTOMER',
-  VENDOR = 'VENDOR',
-  TRAVEL_AGENT = 'TRAVEL AGENT',
-  SUBVENDOR = 'SUBVENDOR',
-}
-
-export enum AuthTypeEnum {
-  GOOGLE = 'GOOGLE',
-  APPLE = 'APPLE',
-  WTI = 'WTI',
-}
-
-export enum ServiceUsingEnum {
-  SELF_DRIVE = 'SELF_DRIVE',
-  CHAUFFEUR = 'CHAUFFEUR',
-}
-
-export enum PlatformUsingEnum {
-  APP = 'APP',
-  WEB = 'WEB',
-}
 
 export type UserDocument = User & Document;
 
@@ -57,7 +39,7 @@ export class User extends Document {
   @Prop({ enum: GenderEnum, default: GenderEnum.UNKNOWN })
   gender: GenderEnum;
 
-  @Prop({ required: true, trim: true })
+  @Prop({ trim: true, default: null })
   countryName: string;
 
   @Prop({ trim: true })
@@ -78,8 +60,8 @@ export class User extends Document {
   @Prop({ trim: true, default: null })
   password?: string;
 
-  @Prop({ enum: UserTypeEnum, default: UserTypeEnum.CUSTOMER })
-  userType: UserTypeEnum;
+  @Prop({ enum: UserRole, default: UserRole.CUSTOMER })
+  userType: UserRole;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'couponCodes' }], default: [] })
   couponCodesUsed: Types.ObjectId[];

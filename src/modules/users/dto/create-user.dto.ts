@@ -1,9 +1,13 @@
 import { IsString, IsOptional, IsEnum, IsEmail, IsNumber, Matches } from 'class-validator';
 import { Types } from 'mongoose';
+import { GenderEnum } from '../schemas/user.schema';
+import { UserRole } from 'src/common/enums/user-role.enum';
+import { PlatformUsingEnum } from 'src/common/enums/platform-using.enum';
+import { AuthTypeEnum } from 'src/common/enums/auth-type.enum';
 
 export class LoginDto {
   @IsString()
-  userCred: string;
+  userCred: any;
 
   @IsString() // Matches work with string
   @Matches(/^\d{6}$/, { message: 'OTP must be exactly 6 digits' })
@@ -11,50 +15,15 @@ export class LoginDto {
 }
 
 export class CreateUserDto {
-  @IsString()
-  @IsOptional()
-  userID: string;
 
   @IsString()
   firstName: string;
 
-  @IsOptional()
-  @IsString()
-  lastName?: string;
-
-  @IsOptional()
-  @IsString()
-  profileImg?: string;
-
   @IsString()
   contact: string;
 
-  @IsOptional()
   @IsString()
   contactCode?: string;
-
-  @IsString()
-  @IsEnum(['MALE', 'FEMALE', 'UNKNOWN', 'TRANSGENDER', 'OTHERS'])
-  gender?: string;
-
-  @IsString()
-  countryName: string;
-
-  @IsOptional()
-  @IsString()
-  stateName?: string;
-
-  @IsOptional()
-  @IsString()
-  address?: string;
-
-  @IsOptional()
-  @IsString()
-  city?: string;
-
-  @IsOptional()
-  @IsString()
-  postalCode?: string;
 
   @IsEmail()
   emailID: string;
@@ -63,26 +32,16 @@ export class CreateUserDto {
   @IsString()
   password?: string;
 
-  @IsEnum(['CUSTOMER', 'VENDOR', 'TRAVEL AGENT', 'SUBVENDOR'])
-  userType?: string;
-
-  @IsOptional()
-  couponCodesUsed?: Types.ObjectId[];
-
-  @IsOptional()
-  offersUsed?: Types.ObjectId[];
-
-  @IsOptional()
-  otp?: {
-    code: number;
-    otpExpiry: Date;
-  };
-
-  @IsOptional()
   @IsString()
-  refreshToken?: string;
+  @IsEnum(UserRole)
+  userType: string;
+
 
   @IsOptional()
-  @IsEnum(['GOOGLE', 'APPLE', 'WTI'])
-  auth_type?: string;
+  @IsEnum(AuthTypeEnum)
+  auth_type: string;
+
+  @IsString()
+  @IsEnum(PlatformUsingEnum)
+  platform_using: string;
 }

@@ -91,22 +91,26 @@ export class UserService {
       const newUser = new this.userModel({
         userID,
         firstName: createUserDto.firstName,
-        gender: createUserDto.gender,
+        gender: 'UNKNOWN',
         contact: createUserDto.contact,
         contactCode: createUserDto.contactCode,
-        countryName: createUserDto.countryName,
-        stateName: createUserDto.stateName,
-        address: createUserDto.address,
-        city: createUserDto.city,
-        postalCode: createUserDto.postalCode,
+        // countryName: createUserDto.countryName,
+        // stateName: createUserDto.stateName,
+        // address: createUserDto.address,
+        // city: createUserDto.city,
+        // postalCode: createUserDto.postalCode,
         emailID: createUserDto.emailID.toLowerCase(),
         password: createUserDto.password,
-        userType: 'CUSTOMER',
-        otp: {
-          code: null,
-          otpExpiry: null,
-        },
+        userType: createUserDto.userType,
+        // otp: {
+        //   code: null,
+        //   otpExpiry: null,
+        // },
         auth_type: createUserDto.auth_type,
+        user_from: {
+          platform_using: createUserDto.platform_using
+        },
+
       });
 
       await newUser.save();
@@ -122,7 +126,7 @@ export class UserService {
         // email: existingUser.emailID,
         // gender: existingUser.gender,
         // contactCode: existingUser.contactCode,
-        country: createUserDto.countryName,
+        // country: createUserDto.countryName,
         },
         null,
         "/user/createUser"
@@ -139,13 +143,22 @@ export class UserService {
     }
   }
 
-  async loginUser(userCred: string) {
+  async loginUser(userCred: any) {
     
     try {
     logger.log("loginUser - Req.payload", userCred)
-    const query = {
-      $or: [{ contact: userCred }, { emailID: userCred }],
-    };
+
+    let query = {};
+
+    if (isNaN(userCred)) {
+      // Input is likely an email
+      const email = String(userCred);
+      query = { emailID: { $regex: new RegExp(`^${email}$`, 'i') } }
+    } else {
+      // Input is likely a phone number
+      const contact = Number(userCred);
+      query = { contact }
+    }
 
     const findCred = await this.userModel.findOne(query);
     if (!findCred) {
@@ -223,9 +236,18 @@ export class UserService {
     const {userCred, otp} = loginData;
 
     logger.log("verifyLoginOtp - Req.payload", userCred, otp)
-    const query = {
-      $or: [{ contact: userCred }, { emailID: userCred }],
-    };
+
+    let query = {};
+
+    if (isNaN(userCred)) {
+      // Input is likely an email
+      const email = String(userCred);
+      query = { emailID: { $regex: new RegExp(`^${email}$`, 'i') } }
+    } else {
+      // Input is likely a phone number
+      const contact = Number(userCred);
+      query = { contact }
+    }
 
     const user = await this.userModel.findOne(query);
 
