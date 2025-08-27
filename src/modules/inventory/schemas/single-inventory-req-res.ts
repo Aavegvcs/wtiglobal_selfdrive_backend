@@ -5,11 +5,11 @@ export type SingleInventoryReqResDocument = SingleInventoryReqRes & Document;
 
 @Schema({ timestamps: true, collection: 'sd_single_inventory_req_res' })
 export class SingleInventoryReqRes {
-  @Prop({ required: true })
-  reqBody: any;
+  @Prop({ type: Object, required: true })
+  reqBody: Record<string, any>;
 
-  @Prop({ required: true })
-  resBody: any;
+  @Prop({ type: Object, required: true })
+  resBody: Record<string, any>;
 
 }
 
