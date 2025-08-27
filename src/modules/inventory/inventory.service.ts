@@ -6,6 +6,7 @@ import { SearchPricingDto } from './dto/search-all-inventory.dto';
 import { standardResponse } from 'src/common/helpers/response.helper';
 import { SearchSinglePricingDto } from './dto/search-single-inventory.dto';
 import items from 'razorpay/dist/types/items';
+import { SingleInventoryReqRes } from './schemas/single-inventory-req-res';
 
 function parseDateTime(dateStr: string, timeStr: string) {
   const [day, month, year] = dateStr.split('/').map(Number);
@@ -226,6 +227,8 @@ function dateTimeCalculator(
 export class InventoryService {
   constructor(
     @InjectModel(Pricing.name) private pricingModel: Model<PricingDocument>,
+       @InjectModel(SingleInventoryReqRes.name)
+        private singleInventoryReqRes: Model<SingleInventoryReqRes>,
   ) {}
 
   async getAllInventoryWithPricing(dto: SearchPricingDto): Promise<any> {
@@ -707,27 +710,27 @@ export class InventoryService {
         vehicle_id: {
           _id:v._id,
           model_name,
-          specs: {
-            Class: specs?.Class ?? null,
-            EngineCapacity: specs?.EngineCapacity ?? null,
-            MaxSpeed: specs?.MaxSpeed ?? null,
-            Doors: specs?.Doors ?? null,
-            Year: specs?.Year ?? null,
-            PowerHP: specs?.PowerHP ?? null,
-            Transmission: specs?.Transmission ?? null,
-            IsSimilarCarsTitle: specs?.IsSimilarCarsTitle ?? false,
-            IsVerified: specs?.IsVerified ?? false,
-            IsSimilarCars: specs?.IsSimilarCars ?? false,
-            Model: specs?.Model ?? null,
-            Seats: specs?.Seats ?? null,
-            Order_number: specs?.Order_number ?? null,
-            DriveType: specs?.DriveType ?? null,
-            ExteriorColor: specs?.ExteriorColor ?? null,
-            Manufactory: specs?.Manufactory ?? null,
-            BodyType: specs?.BodyType ?? null,
-            LuggageCapacity: specs?.LuggageCapacity ?? null,
-            _id: v?._id ?? null,
-          },
+          specs: [
+                { label: "Class", value: specs?.Class ?? null },
+                { label: "EngineCapacity", value: specs?.EngineCapacity ?? null },
+                { label: "MaxSpeed", value: specs?.MaxSpeed ?? null },
+                { label: "Doors", value: specs?.Doors ?? null },
+                { label: "Year", value: specs?.Year ?? null },
+                { label: "PowerHP", value: specs?.PowerHP ?? null },
+                { label: "Transmission", value: specs?.Transmission ?? null },
+                { label: "IsSimilarCarsTitle", value: specs?.IsSimilarCarsTitle ?? false },
+                { label: "IsVerified", value: specs?.IsVerified ?? false },
+                { label: "IsSimilarCars", value: specs?.IsSimilarCars ?? false },
+                { label: "Model", value: specs?.Model ?? null },
+                { label: "Seats", value: specs?.Seats ?? null },
+                { label: "Order_number", value: specs?.Order_number ?? null },
+                { label: "DriveType", value: specs?.DriveType ?? null },
+                { label: "ExteriorColor", value: specs?.ExteriorColor ?? null },
+                { label: "Manufactory", value: specs?.Manufactory ?? null },
+                { label: "BodyType", value: specs?.BodyType ?? null },
+                { label: "LuggageCapacity", value: specs?.LuggageCapacity ?? null },
+                { label: "_id", value: v?._id ?? null },
+              ],
           vehicle_rating: v?.vehicle_rating ?? null,
           isActive: v?.isActive ?? false,
           images: allImagesUrl,
@@ -917,6 +920,10 @@ export class InventoryService {
       selectedMonthlyPlan.fare_Details = calculatedMonthlyRate;
       inventoryMapping.tarrif_selected = is_home_page?"Daily":((duration_days<7 && plan_type == 1)?"Daily":((duration_days>=7 && duration_days<30)||plan_type == 1)?"Weekly":"Monthly"),
       inventoryMapping.tarrifs.push(selectedMonthlyPlan);
+
+
+      const reqResData = await this.singleInventoryReqRes.create({ reqBody: dto, resBody: inventoryMapping });
+      inventoryMapping.reqResId = reqResData._id;
 
       return standardResponse(
         true,
