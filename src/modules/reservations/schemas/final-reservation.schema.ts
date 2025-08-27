@@ -64,8 +64,8 @@ export class FinalReservation extends Document {
   @Prop({ type: String, required: true })
   model_name: string;
 
-  // @Prop({ required: true })
-  // sku_id: string;
+  @Prop({ type: String, required: true })
+  sku_id: string;
 
   @Prop({
     type: [{ type: Types.ObjectId, ref: Extras.name }],
@@ -95,7 +95,10 @@ export class FinalReservation extends Document {
   paymentGatewayUsed: string;
   
   @Prop({default: false}) isModifiedFlag: boolean;
-  @Prop() user_documents_id: string;
+
+  @Prop({ type: Types.ObjectId, each: true, default: [] }) 
+  user_documents_id: Types.ObjectId[];
+  
   @Prop() feedback_collected: boolean;
   @Prop() cancellation_reason: string;
   @Prop() cancelled_by: string;

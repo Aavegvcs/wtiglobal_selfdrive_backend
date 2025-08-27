@@ -65,9 +65,9 @@ export class CreateProvisionalReservationDto {
   @IsNotEmpty()
   model_name: string;
 
-  // @IsString()
-  // @IsNotEmpty()
-  // sku_id: string;
+  @IsString()
+  @IsNotEmpty()
+  sku_id: string;
 
   @IsOptional()
   @IsArray()

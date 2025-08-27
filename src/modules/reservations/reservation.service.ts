@@ -172,7 +172,8 @@ export class ReservationService {
             dropDate: new Date(reservation.dropDate),
             durationDays: duration_days,
             vehicle_id: new Types.ObjectId(vehicleId),
-            // sku_id: reservation.sku_id,
+            model_name: reservation.model_name,
+            sku_id: reservation.sku_id,
             extrasSelected: reservation.extrasSelected?.map((id) => new Types.ObjectId(id)) || [],
             reservationStatus: ReservationStatusEnum.HOLD,
             paymentType: reservation.paymentType,
@@ -181,7 +182,7 @@ export class ReservationService {
             paymentId: null,
             finalPaymentId: null,
             paymentGatewayUsed: reservation.paymentGatewayUsed,
-            user_documents_id: reservation.user_documents_id ?? null,
+            user_documents_id: reservation.user_documents_id?.length > 0 ? reservation.user_documents_id : null,
             });
 
       await reservationResult.save();
@@ -209,139 +210,17 @@ export class ReservationService {
   async createProvisionalReservation(reqBody: any): Promise<any>{
 
 
-    let findInventoryData: any = await this.singleInventoryReqResModel.findById(reqBody.id)
-    findInventoryData = findInventoryData?.resBody; 
-
-    const findInventoryData1 = {
-      vehicle_id: {
-        _id: '689ae8a569a1906cacd0c21a',
-        model_name: 'Nissan Sunny or Similar',
-        specs: {
-          Class: 'SUV',
-          EngineCapacity: '1497 cc',
-          MaxSpeed: 185,
-          Doors: 5,
-          Year: 2023,
-          PowerHP: '115 HP',
-          Transmission: 'Automatic',
-          IsSimilarCarsTitle: true,
-          IsVerified: true,
-          IsSimilarCars: false,
-          Model: 'Creta SX(O)',
-          Seats: 5,
-          Order_number: 'ORD-78901',
-          DriveType: 'FWD',
-          ExteriorColor: 'Phantom Black',
-          Manufactory: 'Hyundai',
-          BodyType: 'Crossover',
-          LuggageCapacity: '3 Bags',
-          _id: '689ae8a569a1906cacd0c21a',
-        },
-        vehicle_rating: 4.6,
-        isActive: true,
-        images: [
-          'https://drive.yango.com/images/preview/rs:fill:580:362:1/q:80/g:ce/sm:1/ar:1/dpr:2/plain/s3://aggregator-media-me-central-1/0a090a54-4f02-4029-8191-352d871d3591/100feb3729d60ad8edee1a0ba24517cd',
-          'https://drive.yango.com/side.jpg',
-          'https://drive.yango.com/interior.jpg',
-          'https://drive.yango.com/dashboard.jpg',
-        ],
-      },
-      tarrifs: [
-        {
-          base: 1500,
-          mileage_limit: 250,
-          is_mileage_unlimited: false,
-          partial_security_deposit: 1000,
-          hikePercentage: 5,
-          pickup: {
-            date: '23/08/2025',
-            time: '10:00',
-          },
-          drop: {
-            date: '25/08/2025',
-            time: '10:00',
-          },
-          tariff_type: 'Daily',
-          fare_Details: {
-            inventory_rate: 1500,
-            base_fare: 3000,
-            extra_charges: 0,
-            delivery_charges: 0,
-            collection_charges: 0,
-            total: 3000,
-            tax: 150,
-            grand_total: 3150,
-          },
-        },
-        {
-          base: 9800,
-          mileage_limit: 1000,
-          is_mileage_unlimited: false,
-          partial_security_deposit: 3000,
-          hikePercentage: 8,
-          pickup: {
-            date: '23/08/2025',
-            time: '10:00',
-          },
-          drop: {
-            date: '30/08/2025',
-            time: '10:00',
-          },
-          tariff_type: 'Weekly',
-          fare_Details: {
-            inventory_rate: 1400,
-            base_fare: 9800,
-            extra_charges: 0,
-            delivery_charges: 0,
-            collection_charges: 0,
-            total: 9800,
-            tax: 490,
-            grand_total: 10290,
-          },
-        },
-        {
-          duration: 1,
-          base: 34000,
-          mileage_limit: 4000,
-          is_mileage_unlimited: false,
-          partial_security_deposit: 5000,
-          hikePercentage: 4,
-          pickup: {
-            date: '23/08/2025',
-            time: '10:00',
-          },
-          drop: {
-            date: '22/09/2025',
-            time: '10:00',
-          },
-          tariff_type: 'Monthly',
-          fare_Details: {
-            inventory_rate: 1133,
-            base_fare: 34000,
-            extra_charges: 0,
-            delivery_charges: 0,
-            collection_charges: 0,
-            total: 34000,
-            tax: 1700,
-            grand_total: 35700,
-          },
-        },
-      ],
-      minimumRentalDays: 2,
-      currency: 'INR',
-      discount_percentage: 10,
-      overrun_cost_per_km: 4.5,
-      insurance_charge: 500,
-      total_security_deposit: 12000,
-      tarrif_selected: 'Daily',
-    };
-
+    let findInventoryData: any = await this.singleInventoryReqResModel.findById(reqBody.reqResId);
+    
+    findInventoryData = {...findInventoryData?.reqBody, ...findInventoryData?.resBody}; 
     const {vehicle_id, tarrifs} = findInventoryData;
+
+    console.log('findInventoryData', findInventoryData)
     
     let selectedTarrif: any;
 
     if(tarrifs && tarrifs.length > 0){
-      selectedTarrif = tarrifs.find((item) => {
+      selectedTarrif = tarrifs.find((item: any) => {
         return item.tariff_type === findInventoryData.tarrif_selected
       })
     }
@@ -352,12 +231,16 @@ export class ReservationService {
     const pickupDate = makeTimeStampFromDateTime(selectedTarrif.pickup, "Asia/Dubai");
     const dropDate = makeTimeStampFromDateTime(selectedTarrif.drop, "Asia/Dubai");
     const daysDiff = calculateDaysDifference(pickupDate, dropDate)
+    
+    console.log("pickupDate:", pickupDate); // 1
+    console.log("dropDate", dropDate);
+    console.log("daysDiff", daysDiff);
 
 
     const BookingDataPacket: WrapperReservationDto = {
       reservation: {
         timezone: 'Asia/Kolkata',
-        country: reqBody.country,
+        country: findInventoryData.source.countryCode,
         search_id: '64f5f07a2e9f8c23b84567d1',
         userType: reqBody.userType,
         tarrifType: findInventoryData.tarrif_selected,
@@ -370,9 +253,10 @@ export class ReservationService {
         durationDays: daysDiff,
         vehicle_id: vehicle_id._id,
         model_name: vehicle_id.model_name,
+        sku_id: "sku_id",
         extrasSelected: reqBody.extrasSelected,
         paymentType: reqBody.paymentType,
-        paymentGatewayUsed: reqBody.country.toUpperCase() == 'IND' ? '1' : '0',
+        paymentGatewayUsed: findInventoryData.source.countryCode.toUpperCase() == 'IND' ? '1' : '0',
         user_documents_id: reqBody.user_documents_id,
       },
       receipt: {
@@ -487,7 +371,8 @@ export class ReservationService {
         // creating mail and whatsapp packet   
 
         const confirmationDataPacket = {
-        contact: `${provisionalReservation.user_id.contactCode}${provisionalReservation.user_id.contact}`,
+        contactCode: provisionalReservation.user_id.contactCode,
+        contact: provisionalReservation.user_id.contact,
         firstName: provisionalReservation.user_id.firstName,
         emailID: provisionalReservation.user_id.emailID,
         order_reference_number: provisionalReservation.order_reference_number,
@@ -500,7 +385,7 @@ export class ReservationService {
         pickupLocation: provisionalReservation.pickupLocation,
         dropLocation: provisionalReservation.dropLocation,
         tarrifType: provisionalReservation.tarrifType,
-        vehicle: provisionalReservation.vehicle_id?.title ?? '',
+        vehicle: provisionalReservation.model_name ?? '',
         // carCategoryName: reservation.vehicle_details?.model ?? '',
         baseFare: (receiptResult.baseFare * receiptResult.currencyInfo.currencyRate).toFixed(2),
         currency: receiptResult.currencyInfo.currency,

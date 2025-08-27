@@ -58,8 +58,6 @@ export function makeTimeStampFromDateTime(
     // Parse with timezone, then convert to UTC
     const utcTimestamp = moment.tz(DateTime, "DD/MM/YYYY HH:mm", timezone).utc();
     
-    console.log("utcTimestamp", utcTimestamp);
-
     return utcTimestamp.toISOString();
 }
 
@@ -69,8 +67,5 @@ export function calculateDaysDifference(startDate: string, endDate: string): num
 
     // Difference in days
     const diffInDays = eDate.diff(sDate, "days");
-
-    console.log("Days difference:", diffInDays); // 1
-
     return diffInDays
 }

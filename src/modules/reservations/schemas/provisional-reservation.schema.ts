@@ -19,7 +19,7 @@ export class ProvisionalReservation extends Document {
   @Prop({ required: true })
   country: string;
 
-  @Prop({ type: Types.ObjectId, ref: "searchmodel", required: true })
+  @Prop({ type: Types.ObjectId, ref: 'searchmodel', required: true })
   search_id: string;
 
   @Prop({ required: true })
@@ -28,10 +28,10 @@ export class ProvisionalReservation extends Document {
   @Prop({ type: Types.ObjectId, ref: ProvisionalReceipt.name, required: true })
   receipt_ref_id: string;
 
-  @Prop() 
+  @Prop()
   invoice_id: string;
 
-  @Prop({ enum:UserRole, default: UserRole.CUSTOMER })
+  @Prop({ enum: UserRole, default: UserRole.CUSTOMER })
   userType: string;
 
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
@@ -55,8 +55,8 @@ export class ProvisionalReservation extends Document {
   @Prop({ required: true })
   durationDays: number;
 
-  @Prop({ enum : TarrifType, required: true})
-  tarrifType: string
+  @Prop({ enum: TarrifType, required: true })
+  tarrifType: string;
 
   @Prop({ type: Types.ObjectId, required: true, ref: Vehicle.name })
   vehicle_id: Types.ObjectId;
@@ -64,8 +64,8 @@ export class ProvisionalReservation extends Document {
   @Prop({ type: String, required: true })
   model_name: string;
 
-  // @Prop({ required: true })
-  // sku_id: string;
+  @Prop({ type: String, required: true })
+  sku_id: string;
 
   @Prop({
     type: [{ type: Types.ObjectId, ref: Extras.name }],
@@ -93,9 +93,12 @@ export class ProvisionalReservation extends Document {
 
   @Prop({ enum: PaymentGatewayUsed, required: true }) // 0 for stripe, 1 for razorpay
   paymentGatewayUsed: string;
-  
+
   @Prop() isModifiedFlag: boolean;
-  @Prop() user_documents_id: string;
+
+  @Prop({ type: Types.ObjectId, each: true, default: [] }) 
+  user_documents_id: Types.ObjectId[];
+
   @Prop() feedback_collected: boolean;
 }
 

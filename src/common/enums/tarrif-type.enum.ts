@@ -1,5 +1,5 @@
 export enum TarrifType {
-    DAILY = "DAILY",
-    WEEKLY = "WEEKLY",
-    MONTHLY = "MONTHLY"
+    DAILY = "Daily",
+    WEEKLY = "Weekly",
+    MONTHLY = "Monthly"
 }

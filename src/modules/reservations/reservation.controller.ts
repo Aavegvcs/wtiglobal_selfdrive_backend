@@ -1,9 +1,9 @@
 import { Body, Controller, Get, Param, Post, Res } from "@nestjs/common";
 import { ReservationService } from "./reservation.service";
 import { Response } from "express";
-import { WrapperReservationDto } from "./dto/wrapper-reservation.dto";
 import { FinalReservationDto } from "./dto/create-final-reservation.dto";
 import { CancelReservationDto } from "./dto/cancel-reservation.dto";
+import { IncomingReservationDto } from "./dto/incoming-reservation.dto";
 
 
 @Controller('reservations')
@@ -11,8 +11,8 @@ export class ReservationController {
     constructor(private readonly reservationService: ReservationService) {}
 
     @Post('createProvisionalReservation')
-    async createProvisionalReservation(@Body() wrapperReservationDto: WrapperReservationDto, @Res() res: Response) {
-        const response = await this.reservationService.createProvisionalReservation(wrapperReservationDto);
+    async createProvisionalReservation(@Body() incomingReservationDto: IncomingReservationDto, @Res() res: Response) {
+        const response = await this.reservationService.createProvisionalReservation(incomingReservationDto);
         return res.status(response.statusCode).json(response);
     }
 
