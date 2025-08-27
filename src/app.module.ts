@@ -16,6 +16,8 @@ import { FaqModule } from './modules/faq/faq.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
 import { DeliveryCollectionRateModule } from './modules/delivery-collection-rates/delivery-collection-rates.module';
 import { GoogleApiModule } from './modules/google/google.module';
+import { S3Module } from './modules/aws_s3/s3/s3.module';
+import { FilesModule } from './modules/aws_s3/files/files.module';
 
 @Module({
   imports: [
@@ -48,7 +50,9 @@ import { GoogleApiModule } from './modules/google/google.module';
     FaqModule,
     WebhookModule,
     DeliveryCollectionRateModule,
-    GoogleApiModule
+    GoogleApiModule,
+    S3Module,
+    FilesModule
   ],
   controllers: [AppController],
   providers: [AppService],
