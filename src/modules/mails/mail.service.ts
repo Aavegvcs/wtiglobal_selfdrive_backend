@@ -134,7 +134,7 @@ export class MailService {
               <span class="label">Reservation Number:</span> ${data.order_reference_number}
             </div>
             <div class="section">
-              <span class="label">Rental Type:</span> ${data.rentalType}
+              <span class="label">Tarrif Type:</span> ${data.tarrifType}
             </div>
             <div class="section">
               <span class="label">Pickup Time:</span> ${data.pickupDate}
@@ -289,7 +289,7 @@ export class MailService {
               <span class="label">Reservation Number:</span> ${data.order_reference_number}
             </div>
             <div class="section">
-              <span class="label">Rental Type:</span> ${data.rentalType}
+              <span class="label">Tarrif Type:</span> ${data.tarrifType}
             </div>
             <div class="section">
               <span class="label">Pickup Time:</span> ${data.pickupDate}

@@ -9,7 +9,7 @@ import { PaymentType } from 'src/common/enums/payment-type.enum';
 import { PaymentGatewayUsed } from 'src/common/enums/payment-gateway.enum';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { PartnerName } from 'src/common/enums/partner-name.enum';
-import { RentalType } from 'src/common/enums/rental-type.enum';
+import { TarrifType } from 'src/common/enums/tarrif-type.enum';
 
 @Schema({ timestamps: true, collection: 'sd_final_reservations' })
 export class FinalReservation extends Document {
@@ -17,7 +17,7 @@ export class FinalReservation extends Document {
   timezone: string;
 
   @Prop({ required: true })
-  countryName: string;
+  country: string;
 
   @Prop({ type: Types.ObjectId, ref: "searchmodel", required: true })
   search_id: string;
@@ -55,14 +55,17 @@ export class FinalReservation extends Document {
   @Prop({ required: true })
   durationDays: number;
 
-  @Prop({ enum : RentalType, required: true})
-  rentalType: string
+  @Prop({ enum : TarrifType, required: true})
+  tarrifType: string
 
   @Prop({ type: Types.ObjectId, required: true, ref: Vehicle.name })
   vehicle_id: Types.ObjectId | Vehicle;
 
-  @Prop({ required: true })
-  sku_id: string;
+  @Prop({ type: String, required: true })
+  model_name: string;
+
+  // @Prop({ required: true })
+  // sku_id: string;
 
   @Prop({
     type: [{ type: Types.ObjectId, ref: Extras.name }],
@@ -90,17 +93,6 @@ export class FinalReservation extends Document {
 
   @Prop({ enum: PaymentGatewayUsed, required: true }) // 0 for stripe, 1 for razorpay
   paymentGatewayUsed: string;
-
-  @Prop({
-    type: {
-      discountType: {type: String, default: null},
-      discountId: {type: Types.ObjectId, default: null},
-    },
-  })
-  discount: {
-    discountType: string;
-    discountId: Types.ObjectId;
-  }
   
   @Prop({default: false}) isModifiedFlag: boolean;
   @Prop() user_documents_id: string;

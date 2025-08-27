@@ -6,6 +6,7 @@ import { Countries } from './countries.schema';
 export class Cities extends Document {
   @Prop({ required: true, unique: true }) city: string;
   @Prop({ required: true, uppercase: true }) countryCode: string;
+  @Prop({ required: true }) timezone: string;
 
   // 👇 Reference to Countries._id
   @Prop({ type: Types.ObjectId, ref: Countries.name, required: true })

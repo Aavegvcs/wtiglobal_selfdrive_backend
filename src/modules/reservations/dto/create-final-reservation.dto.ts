@@ -1,5 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { RentalType } from 'src/common/enums/rental-type.enum';
+import { IsOptional, IsString } from 'class-validator';
 
 export class FinalReservationDto {
   @IsString()

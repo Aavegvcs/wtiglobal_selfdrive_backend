@@ -7,6 +7,10 @@ export class CreateCityDto {
   @IsNotEmpty()
   city: string;
 
+  @IsString()
+  @IsNotEmpty()
+  timezone: string;
+
   @IsMongoId()
   @IsNotEmpty()
   countryId: Types.ObjectId;
