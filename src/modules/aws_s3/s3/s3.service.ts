@@ -75,13 +75,13 @@ export class S3Service {
     cacheControl?: string;
     inline?: boolean;    // control ContentDisposition
   }) {
-    console.log(params);
+    // console.log(params);
     const { buffer, originalName, contentType, folder, keyOverride, acl, cacheControl, inline } = params;
     const Key = this.buildKey(folder, originalName, keyOverride);
     const ACL = acl ?? this.defaultAcl;
 
 
-    console.log(Key,ACL,contentType,);
+    // console.log(Key,ACL,contentType,);
     try {
       // Use multipart Upload for reliability on larger files too
       const uploader = new Upload({

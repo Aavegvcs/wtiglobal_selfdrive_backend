@@ -33,8 +33,6 @@ async sendOtpOnWhatsapp(recipient: string, otp: number) {
 
     const url = `https://api.versal.one/${this.clientId}`;
 
-    console.log('this.clientSecret', this.clientSecret)
-    console.log('this.clientId', this.clientId)
     await firstValueFrom(
         this.httpService.post(url, sendData, {
         headers: {
