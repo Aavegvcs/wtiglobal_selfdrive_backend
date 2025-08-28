@@ -12,4 +12,10 @@ export class GoogleApiController {
     const response = await this.googleApiService.getPlaces(countryCode, place);
     return res.status(response.statusCode).json(response)
   }
+
+  @Get('getLatLong/:placeId')
+  async getLatLong(@Param('placeId') placeId: string, @Res() res: Response) {
+    const response = await this.googleApiService.getLatLong(placeId);
+    return res.status(response.statusCode).json(response)
+  }
 }
