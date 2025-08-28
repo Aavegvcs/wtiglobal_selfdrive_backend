@@ -7,6 +7,9 @@ import { standardResponse } from 'src/common/helpers/response.helper';
 import { SearchSinglePricingDto } from './dto/search-single-inventory.dto';
 import items from 'razorpay/dist/types/items';
 import { SingleInventoryReqRes } from './schemas/single-inventory-req-res';
+import { v4 as uuidv4 } from 'uuid';
+import { Search, SearchRequestDocument } from './schemas/search-schema';
+
 
 function parseDateTime(dateStr: string, timeStr: string) {
   const [day, month, year] = dateStr.split('/').map(Number);
@@ -229,11 +232,19 @@ export class InventoryService {
     @InjectModel(Pricing.name) private pricingModel: Model<PricingDocument>,
        @InjectModel(SingleInventoryReqRes.name)
         private singleInventoryReqRes: Model<SingleInventoryReqRes>,
+        @InjectModel(Search.name) private searchModel: Model<SearchRequestDocument>,
   ) {}
 
   async getAllInventoryWithPricing(dto: SearchPricingDto): Promise<any> {
     try {
       const { source, pickup, drop, plan_type, duration_months } = dto;
+
+      // Generate a UUID
+      const myUuid: string = uuidv4();
+
+      let searchId = source.city+"_"+myUuid;
+
+      await this.searchModel.create({search_id:searchId,reqBody:dto})
 
       let durationDays = 0;
 
