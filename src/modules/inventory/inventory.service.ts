@@ -9,6 +9,8 @@ import items from 'razorpay/dist/types/items';
 import { SingleInventoryReqRes } from './schemas/single-inventory-req-res';
 import { v4 as uuidv4 } from 'uuid';
 import { Search, SearchRequestDocument } from './schemas/search-schema';
+import { vehicleClassDto } from './dto/vehicle-class.dto';
+import { VehicleClass, VehicleClassDocument } from './schemas/vehicle-class.schema';
 
 
 function parseDateTime(dateStr: string, timeStr: string) {
@@ -233,6 +235,7 @@ export class InventoryService {
        @InjectModel(SingleInventoryReqRes.name)
         private singleInventoryReqRes: Model<SingleInventoryReqRes>,
         @InjectModel(Search.name) private searchModel: Model<SearchRequestDocument>,
+        @InjectModel(VehicleClass.name) private vehicleClassModel: Model<VehicleClassDocument>,
   ) {}
 
   async getAllInventoryWithPricing(dto: SearchPricingDto): Promise<any> {
@@ -955,4 +958,79 @@ export class InventoryService {
       );
     }
   }
+
+
+  
+ async createOrUpdateVehicleClass(dto: vehicleClassDto): Promise<any> {
+  try {
+    const { imageUrl, className } = dto;
+
+    const updatedOrCreated = await this.vehicleClassModel.findOneAndUpdate(
+      { className: className },       // match condition
+      { imageUrl, className },        // data to update
+      { new: true, upsert: true }     // new = return updated doc, upsert = insert if not found
+    );
+
+    return standardResponse(
+        true,
+        'created or updated vehicle class successfully',
+        200,
+        updatedOrCreated,
+        null,
+        '/inventory/createOrUpdateVehicleClass',
+    );
+  } catch (error) {
+    console.error('Error in createOrUpdateVehicleClass:', error);
+    return standardResponse(
+        false,
+        'unable to created or updated vehicle class',
+        500,
+        null,
+        error,
+        '/inventory/createOrUpdateVehicleClass',
+    );
+    
+  }
+
+  
+}
+
+async getAllVehicleClasses(): Promise<any> {
+  try {
+    const result =  await this.vehicleClassModel.find().exec();
+
+    if(result){
+      return standardResponse(
+        true,
+        'All classes fetched successfully',
+        200,
+        result,
+        null,
+        '/inventory/getAllVehicleClasses',
+      );
+
+    }else{
+       return standardResponse(
+        false,
+        'unable to getch all classes successfully',
+        404,
+        result,
+        null,
+        '/inventory/getAllVehicleClasses',
+      );
+    }
+
+
+  } catch (error) {
+    console.error('Error in getAllVehicleClasses:', error);
+   return standardResponse(
+        false,
+        'unable to getch all classes successfully',
+        500,
+        null,
+        error,
+        '/inventory/getAllVehicleClasses',
+      );
+  }
+}
 }

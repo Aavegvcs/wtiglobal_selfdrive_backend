@@ -3,6 +3,7 @@ import { SearchPricingDto } from './dto/search-all-inventory.dto';
 import { InventoryService } from './inventory.service';
 import { response, Response } from 'express';
 import { SearchSinglePricingDto } from './dto/search-single-inventory.dto';
+import { vehicleClassDto } from './dto/vehicle-class.dto';
 
 @Controller('inventory')
 export class InventoryController {
@@ -54,5 +55,15 @@ export class InventoryController {
 
     const response = await this.inventoryService.getSingleInventoryWithPricing(dto);
     return res.status(response.statusCode).json(response);
+  }
+
+  @Post('createOrUpdateVehicleClass')
+  async createOrUpdate(@Body() dto: vehicleClassDto) {
+    return this.inventoryService.createOrUpdateVehicleClass(dto);
+  }
+
+  @Get('getAllVehicleClasses')
+  async getAll() {
+    return this.inventoryService.getAllVehicleClasses();
   }
 }
