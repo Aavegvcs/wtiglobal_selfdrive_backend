@@ -23,10 +23,6 @@ export class IncomingReservationDto {
   @IsNotEmpty()
   user_id: string;
 
-  @IsString()
-  @IsNotEmpty()
-  vehicle_id: string;
-
   @IsArray()
   @IsString({ each: true })
   @IsOptional()

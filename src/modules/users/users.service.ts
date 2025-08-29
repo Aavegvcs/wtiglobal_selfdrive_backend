@@ -152,7 +152,7 @@ export class UserService {
 
     if (isNaN(userCred)) {
       // Input is likely an email
-      const email = String(userCred);
+      const email = userCred.toString();
       query = { emailID: { $regex: new RegExp(`^${email}$`, 'i') } }
     } else {
       // Input is likely a phone number
@@ -241,7 +241,7 @@ export class UserService {
 
     if (isNaN(userCred)) {
       // Input is likely an email
-      const email = String(userCred);
+      const email = userCred.toString();
       query = { emailID: { $regex: new RegExp(`^${email}$`, 'i') } }
     } else {
       // Input is likely a phone number
@@ -266,10 +266,10 @@ export class UserService {
     }
 
     const payload : TokenPayload = {
-      user_obj_id: String(user?._id),
+      user_obj_id: user?._id?.toString() || '',
       emailID: user.emailID,
       username: user.firstName,
-      profileImg: String(user.profileImg),
+      profileImg: user?.profileImg?.toString() || '',
       role: user.userType,
       countryName: user?.countryName,
         //   user.gender,

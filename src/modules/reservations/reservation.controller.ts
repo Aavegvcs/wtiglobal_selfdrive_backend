@@ -39,4 +39,10 @@ export class ReservationController {
         const response = await this.reservationService.cancelReservation(cancelReservationDto);
         return res.status(response.statusCode).json(response);
     }
+
+    @Get('getFinalReservationAndReceipts/:user_id/:reservationStatus') 
+    async getFinalReservationAndReceipts(@Param('user_id') user_id: string, @Param('reservationStatus') reservationStatus: string, @Res() res: Response) {
+        const response = await this.reservationService.getFinalReservationAndReceipts(user_id, reservationStatus);
+        return res.status(response.statusCode).json(response);
+    }
 }

@@ -69,3 +69,7 @@ export function calculateDaysDifference(startDate: string, endDate: string): num
     const diffInDays = eDate.diff(sDate, "days");
     return diffInDays
 }
+
+export function addDaysToDate(date: string, daysToAdd: number): string{
+   return moment.utc(date).add(daysToAdd, "days").toISOString();
+}
