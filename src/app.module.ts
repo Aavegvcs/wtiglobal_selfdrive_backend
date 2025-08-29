@@ -18,6 +18,7 @@ import { DeliveryCollectionRateModule } from './modules/delivery-collection-rate
 import { GoogleApiModule } from './modules/google/google.module';
 import { S3Module } from './modules/aws_s3/s3/s3.module';
 import { FilesModule } from './modules/aws_s3/files/files.module';
+import { CurrencyModule } from './modules/currency/currency.module';
 
 @Module({
   imports: [
@@ -52,7 +53,8 @@ import { FilesModule } from './modules/aws_s3/files/files.module';
     DeliveryCollectionRateModule,
     GoogleApiModule,
     S3Module,
-    FilesModule
+    FilesModule,
+    CurrencyModule
   ],
   controllers: [AppController],
   providers: [AppService],
