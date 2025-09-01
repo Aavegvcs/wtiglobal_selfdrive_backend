@@ -59,7 +59,7 @@ export class UserService {
 
   async createUser(createUserDto: CreateUserDto): Promise<any> {
     try {
-      const existingUser = await this.userModel
+      const existingUser: any = await this.userModel
         .findOne({
           $or: [
             { contact: createUserDto.contact },
@@ -73,7 +73,7 @@ export class UserService {
           userCreated: false,
           userExist: true,
           // userID: existingUser.userID,
-          // user_obj_id: existingUser._id,
+          user_obj_id: existingUser._id,
           // role: existingUser.userType,
           // name: existingUser.firstName,
           // number: existingUser.contact,
@@ -119,7 +119,7 @@ export class UserService {
         userCreated: true,
         userExist: false,
         // userID: existingUser.userID,
-        // user_obj_id: existingUser._id,
+        user_obj_id: existingUser._id,
         // role: existingUser.userType,
         // name: existingUser.firstName,
         // number: existingUser.contact,
