@@ -119,7 +119,7 @@ export class UserService {
         userCreated: true,
         userExist: false,
         // userID: existingUser.userID,
-        user_obj_id: existingUser._id,
+        user_obj_id: newUser._id,
         // role: existingUser.userType,
         // name: existingUser.firstName,
         // number: existingUser.contact,
