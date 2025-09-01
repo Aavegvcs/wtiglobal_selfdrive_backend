@@ -14,6 +14,7 @@ export class VehicleService {
   // ✅ Create or Update Vehicle
   async createOrUpdateVehicle(dto: CreateVehicleDto): Promise<any> {
     try {
+      console.log(dto);
       const existingVehicle = await this.vehicleModel.findOne({ id: dto.id });
 
       if (existingVehicle) {
