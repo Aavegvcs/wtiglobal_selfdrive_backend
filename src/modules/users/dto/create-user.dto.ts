@@ -4,6 +4,7 @@ import { GenderEnum } from '../schemas/user.schema';
 import { UserRole } from 'src/common/enums/user-role.enum';
 import { PlatformUsingEnum } from 'src/common/enums/platform-using.enum';
 import { AuthTypeEnum } from 'src/common/enums/auth-type.enum';
+import { Transform } from 'class-transformer';
 
 export class LoginDto {
   @IsString()
@@ -50,7 +51,8 @@ export class CreateUserDto {
 
   @IsString()
   @IsEnum(GenderEnum)
-  gender: string;
+  @Transform(({ value }) => value || GenderEnum.MALE) // Default if not provided
+  gender: GenderEnum = GenderEnum.UNKNOWN;
 
   @IsString()
   @IsOptional()
