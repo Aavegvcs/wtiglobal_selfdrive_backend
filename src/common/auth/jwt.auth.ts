@@ -28,3 +28,20 @@ export const generateRefreshToken = async (payload: TokenPayload, configService:
   return token;
 };
 
+export const verifyJwtToken = async(token: string, secretKey: string) => {
+    try {
+      if (!token) {
+        return { isValid: false, message: "Missing token!" };
+      }
+      
+      const verifyToken = jwt.verify(token, secretKey);
+      console.log('verifyToken', verifyToken)
+
+      logger.log("Valid token: ", verifyToken)
+      return {isValid: true, message: "Valid token!", decodedToken: verifyToken}
+    } catch (error: any) {
+      logger.log("Error from verifyJwtToken: ", error)
+      return {isValid: false, message: error.message}
+    }
+
+}

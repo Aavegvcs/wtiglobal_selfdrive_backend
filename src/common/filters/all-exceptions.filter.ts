@@ -22,16 +22,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = exception.getStatus();
       const res = exception.getResponse();
       if (typeof res === 'object' && res !== null && 'message' in res) {
-        message = (res as any).message;
+        message = (res as any);
       } else {
         message = res as string;
       }
-      errorMessage = (exception as any)?.message;
+      errorMessage = JSON.stringify(exception as any);
     } else if (exception instanceof Error) {
-      errorMessage = exception.message;
       message = exception.message;
+      errorMessage = JSON.stringify(exception);
     } else {
-      errorMessage = String(exception);
+      errorMessage = JSON.stringify(exception);
     }
 
     const formatted = standardResponse(

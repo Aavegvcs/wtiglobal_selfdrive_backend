@@ -32,9 +32,29 @@ export class CreateUserDto {
   @IsString()
   password?: string;
 
+  @IsOptional()
+  @IsString()
+  profileImg?: string;
+
+  @IsOptional()
+  @IsString()
+  stateName?: string;
+
   @IsString()
   @IsEnum(UserRole)
   userType: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsString()
+  @IsEnum(GenderEnum)
+  gender: string;
+
+  @IsString()
+  @IsOptional()
+  countryName: string;
 
 
   @IsOptional()

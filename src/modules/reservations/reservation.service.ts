@@ -641,7 +641,7 @@ export class ReservationService {
         .findOne({ order_reference_number })
         .populate([
           { path: 'user_id', select: 'firstName' },
-          // { path: 'extrasSelected' },
+          { path: 'vehicle_id', select: 'images' },
         ])
         .lean()
         .exec();
@@ -665,6 +665,7 @@ export class ReservationService {
           { label: 'Vehicle', value: result.model_name },
           { label: 'Booked On', value: convertUtcToTimezone(result.createdAt, result.timezone) },
         ],
+        vehicleImg: `${result.vehicle_id.images.url_prefix}${result.vehicle_id.images.s3_paths[0]}`,
         pickup: {
           title: 'Pickup',
           address: result.pickupLocation,
@@ -710,6 +711,7 @@ export class ReservationService {
         .findOne({ order_reference_number })
         .populate([
           { path: 'user_id', select: 'firstName' },
+          { path: 'vehicle_id', select: 'images' },
           // { path: 'extrasSelected' },
         ])
         .lean()
@@ -734,6 +736,7 @@ export class ReservationService {
           { label: 'Vehicle', value: result.model_name },
           { label: 'Booked On', value: convertUtcToTimezone(result.createdAt, result.timezone) },
         ],
+        vehicleImg: `${result.vehicle_id.images.url_prefix}${result.vehicle_id.images.s3_paths[0]}`,
         pickup: {
           title: 'Pickup',
           address: result.pickupLocation,

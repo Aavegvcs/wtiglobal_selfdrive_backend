@@ -1,18 +1,20 @@
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import {
   Injectable,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { CreateUserDto, LoginDto } from './dto/create-user.dto';
 import { standardResponse } from 'src/common/helpers/response.helper';
 import { otpExpiry, otpGenerator } from 'src/common/utils/otp.util';
 import { timeStamp } from 'src/common/utils/time.util';
-import { generateAccessToken, generateRefreshToken, TokenPayload } from 'src/common/auth/jwt.auth';
+import { generateAccessToken, generateRefreshToken, TokenPayload, verifyJwtToken } from 'src/common/auth/jwt.auth';
 import { ConfigService } from '@nestjs/config';
 import { WhatsappService } from '../whatsapp/whatsapp.service';
 import { MailService } from '../mails/mail.service';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 const logger = new Logger("UserService");
 
@@ -296,4 +298,42 @@ export class UserService {
   }
   }
 
+  async updateUserDetails(token: string, updateDto: UpdateUserDto) {
+    try {
+
+      const secretKey = this.configService.get<string>('JWT_ACCESS_SECRET')!
+      
+      // 1. Verify JWT
+      const verify = await verifyJwtToken(token, secretKey);
+
+      if (!verify.isValid) {
+        throw new UnauthorizedException(verify.message);
+      }
+
+      
+      // 2. Update user
+      const query = { _id: new mongoose.Types.ObjectId(verify.decodedToken.user_obj_id) };
+      
+      const { emailID, contact, ...otherDtoData } = updateDto;
+
+      const updatedUser = await this.userModel.findOneAndUpdate(query, { $set: { ...otherDtoData } }, { new: true });
+
+      if (!updatedUser) {
+        return standardResponse(false, 'User not found', 404, null, null, "/user/updateUserDetails");
+      }
+
+      return standardResponse(true, 'User updated successfully', 200, null, null, "/user/updateUserDetails");
+    } catch (error: any) {
+      return standardResponse(false, 'Internal Server Error', 500, null, error, "/user/updateUserDetails");
+    }
+  }
+
+  async isUserExist(userObjID: string): Promise<boolean> {
+    try {
+      const user = await this.userModel.findById(userObjID);
+      return !!user;
+    } catch (error) {
+      return false;
+    }
+  }
 }
