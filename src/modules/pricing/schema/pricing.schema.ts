@@ -91,7 +91,7 @@ export class Pricing {
     },
     _id: false
   })
-  insurance_premium_percentage: {
+  security_deposit_premium: {
     daily: number;
     weekly: number;
     monthly: number;
@@ -99,6 +99,34 @@ export class Pricing {
 
   @Prop()
   total_security_deposit: number;
+
+  @Prop({
+    type: {
+      daily: Number,
+      weekly: Number,
+      monthly: Number
+    },
+    _id: false
+  })
+  collision_damage_waiver: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+  };
+
+  @Prop({
+    type: {
+      daily: Number,
+      weekly: Number,
+      monthly: Number
+    },
+    _id: false
+  })
+  personal_accidental_insurance: {
+    daily: number;
+    weekly: number;
+    monthly: number;
+  };
 
   @Prop()
   onDemand: boolean;

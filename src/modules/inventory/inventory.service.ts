@@ -19,16 +19,19 @@ function parseDateTime(dateStr: string, timeStr: string) {
   return new Date(year, month - 1, day, hours, minutes);
 }
 
-function fareDetailsCalculation(inventoryRate:number, base_fare: number, extra_charges: number,delivery_charges: number, collection_charges:number) {
+function fareDetailsCalculation(inventoryRate:number, base_fare: number, extra_charges: number,delivery_charges: number, collection_charges:number, cdw:number, pai:number, security_deposit:number) {
     try {
       const tax = 0.05;
-      const total = base_fare+extra_charges+delivery_charges+collection_charges;
+      const total = base_fare+extra_charges+delivery_charges+collection_charges+cdw+pai+security_deposit;
       const total_tax = total*tax;
       const grand_total = total+total_tax;
 
       return{
         inventory_rate:Number(inventoryRate.toFixed(0)),
         base_fare:Number(base_fare.toFixed(0)),
+        cdw: Number(cdw.toFixed(0)),
+        pai: Number(pai.toFixed(0)),
+        security_deposit: Number(security_deposit.toFixed(0)),
         extra_charges:Number(extra_charges.toFixed(0)) || 0,
         delivery_charges:Number(delivery_charges.toFixed(0)) || 0,
         collection_charges:Number(collection_charges.toFixed(0)) || 0,
@@ -49,64 +52,6 @@ function fareDetailsCalculation(inventoryRate:number, base_fare: number, extra_c
 }
 
 
-// function dateTimeCalculator(home_page:Boolean,plan_type:number,plan: string,duration_months:number ,pickup: Object, drop: Object, minimum_rental_days: number,durationDays:number){
-
-//   try {
-//     "pickup": {
-//                 "date": "14/08/2025",
-//                 "time": "02:00"
-//             },
-//             "drop": {
-//                 "date": "14/08/2025",
-//                 "time": "02:00"
-//             },
-//     if(home_page){
-//       if(plan_type == 1){
-//         if(plan == "daily"){
-//           add add minimum_rental_days days in pickup to calculate drop date and change the dropdate to it
-
-//         }else if(plan == "weekly"){
-//           add 7 days in pickup to calculate drop date and change the dropdate to it
-//         }
-
-//       }else{
-//         add 30 days in pickup to calculate drop date and change the dropdate to it
-//       }
-
-
-//     }else{
-//       if(plan_type == 1){
-//         if(plan == "daily"){
-//            if(durationDays<minimum_rental_days){
-//               add minimum rental days in the pickup and change the drop date and retunr drop date object else use return same drop date
-             
-
-//         }else if(plan == "weekly"){
-//           return same drop date
-//         }
-
-//       }else{
-//         if(duration_months == 1){
-//           add 30 days in pickup to calculate drop date and change the dropdate to it
-//         }else if(duration_months == 3){
-//           add 60 days in pickup to calculate drop date and change the dropdate to it
-//         }else if(duration_months == 6){
-//             add 90 days in pickup to calculate drop date and change the dropdate to it
-//         }else if(duration_months == 9){
-//           add 120 days in pickup to calculate drop date and change the dropdate to it
-//         }
-//       }
-
-
-//     }
-
-
-    
-//   } catch (error) {
-//     console.log(error)
-//   }
-// }
-
 type DateTime = {
   date: string; // format: "DD/MM/YYYY"
   time: string; // format: "HH:mm"
@@ -114,7 +59,7 @@ type DateTime = {
 
 function calculateDurationDays(planTypeString:string,pickup:DateTime,drop:DateTime,duration_months:number){
 
-  console.log('111',planTypeString,pickup,drop,duration_months);
+  // console.log('111',planTypeString,pickup,drop,duration_months);
 
   let durationDays = 0;
   if (planTypeString === 'DAILY_WEEKLY_RENTAL') {
@@ -147,7 +92,7 @@ function dateTimeCalculator(
   durationDays: number
 ): DateTime {
   try {
-    console.log("dateTIme",home_page,plan_type,plan,duration_months,pickup,drop,minimum_rental_days,durationDays);
+    // console.log("dateTIme",home_page,plan_type,plan,duration_months,pickup,drop,minimum_rental_days,durationDays);
     // Helper: Parse "DD/MM/YYYY" and "HH:mm" to Date object
     const parseDate = (dateStr: string, timeStr: string): Date => {
       const [day, month, year] = dateStr.split('/').map(Number);
@@ -199,7 +144,7 @@ function dateTimeCalculator(
           }
           // else: return existing drop
         } else if (plan === 'weekly') {
-          console.log("hellow")
+          // console.log("hellow")
           // No change to dropDateTime
           dropDateTime = new Date(pickupDateTime);
           dropDateTime.setDate(dropDateTime.getDate() + durationDays);
@@ -273,7 +218,7 @@ export class InventoryService {
         durationDays = Math.ceil((duration_months || 1) * 30);
       }
 
-      console.log({ durationDays });
+      // console.log({ durationDays });
 
       // console.log(durationDays);
       const inventory = await this.pricingModel
@@ -303,7 +248,7 @@ export class InventoryService {
       for (const item of inventory) {
         const v = item.vehicle_id as any | null;
 
-        console.log(v);
+        // console.log(v);
 
         const dailyPlan = item.tariff_daily || {};
         const weeklyPlan = item.tariff_weekly || {};
@@ -532,7 +477,7 @@ export class InventoryService {
             : [];
 
         let plan = doc.tariff_monthly?.find((plan) => plan.duration === 1);
-        console.log(plan);
+        // console.log(plan);
         return {
           vehicle_id: {
             _id:v._id,
@@ -626,16 +571,19 @@ export class InventoryService {
       // const { vehicle_id, pickup_date, drop_date, plan_type, duration_months } = dto;
 
       const {
-        vehicle_id,
+    vehicle_id,
     source,
     pickup,
     drop,
     plan_type,
     duration_months = plan_type === 2 ? 1 : 0,
     is_home_page = false,
+    cdw,
+    pai,
+    security_deposit
       } = dto;
 
-      console.log(dto);
+      // console.log(dto);
       
       // console.log(durationDays);
       const inventory = await this.pricingModel
@@ -694,7 +642,7 @@ export class InventoryService {
 
       // console.log(dailyDurationDays,weeklyDurationDays,monthlyDurationDays);
       // console.log("671",daily_drop_date,weekly_drop_date,monthly_drop_date);
-      console.log(duration_days,"677");
+      // console.log(duration_days,"677");
 
       
 
@@ -762,10 +710,10 @@ export class InventoryService {
       // daily
       if(is_home_page == false){
         if((duration_days<7)){
-          console.log(duration_days,"742")
+          // console.log(duration_days,"742")
           dailyDurationDays = duration_days;
           daily_drop_date = dateTimeCalculator(is_home_page,plan_type,"daily",duration_months,pickup,drop,inventory[0].minimumRentalDays,dailyDurationDays);
-          console.log(daily_drop_date,"745")
+          // console.log(daily_drop_date,"745")
           weeklyDurationDays = 7;
           weekly_drop_date = dateTimeCalculator(is_home_page,1,"weekly",duration_months,pickup,drop,inventory[0].minimumRentalDays,weeklyDurationDays);
           monthlyDurationDays = 30;
@@ -787,10 +735,27 @@ export class InventoryService {
           monthly_drop_date = dateTimeCalculator(is_home_page,plan_type,"monthly",duration_months,pickup,drop,inventory[0].minimumRentalDays,monthlyDurationDays);
         }
       }
-      console.log(duration_days,daily_drop_date,weekly_drop_date,monthly_drop_date,"765");
+      // console.log(duration_days,daily_drop_date,weekly_drop_date,monthly_drop_date,"765");
+
+      let dailyCdwRate = 0;
+      let dailyPaiRate = 0;
+      let dailySecurityRate = 0;
 
 
       const dailyRate = (dailyPlan.base || 0) * dailyDurationDays;
+
+      if(pai){
+        dailyCdwRate = (inventory[0].collision_damage_waiver.daily || 0) * dailyDurationDays;
+      
+
+      }
+      if(cdw){
+        dailyPaiRate = (inventory[0].personal_accidental_insurance.daily || 0) * dailyDurationDays;
+      
+      }
+      if(security_deposit){
+        dailySecurityRate = (inventory[0].security_deposit_premium.daily || 0) * dailyDurationDays;
+      }
 
 
       // let base_fare = dailyPlan.base;
@@ -800,12 +765,18 @@ export class InventoryService {
         extra_charges,
         delivery_charges,
         collection_charges,
+        dailyCdwRate,
+        dailyPaiRate,
+        dailySecurityRate
       );
       // console.log(dailyPlan,"749");
       dailyPlan.pickup = pickup;
       dailyPlan.drop = daily_drop_date;
       dailyPlan.tariff_type = 'Daily';
       dailyPlan.fare_Details = daily_fare_details;
+      dailyPlan.collision_damage_waiver = dailyCdwRate;
+      dailyPlan.parsonal_accidental_insurance = dailyPaiRate;
+      dailyPlan.security_deposit_premium = dailySecurityRate;
       inventoryMapping.tarrifs.push(dailyPlan);
 
       // console.log(dailyPlan,"756");
@@ -813,15 +784,45 @@ export class InventoryService {
 
       // weekly
 
-
+      
 
       const weeklyBase = weeklyPlan.base || 0;
       let weeklyBaseRate = weeklyBase / 7;
       let weeklyFinalRate = weeklyBaseRate * weeklyDurationDays;
 
+      let weeklyCdwRate = 0;
+      let weeklyPaiRate = 0;
+      let weeklySecurityRate = 0;
+
+      if(pai){
+        weeklyCdwRate = ((inventory[0].collision_damage_waiver.weekly || 0)/7) * weeklyDurationDays;
+      
+
+      }
+      if(cdw){
+        weeklyPaiRate = ((inventory[0].personal_accidental_insurance.weekly || 0)/7) * weeklyDurationDays;
+      
+      }
+      if(security_deposit){
+        weeklySecurityRate = ((inventory[0].security_deposit_premium.weekly || 0)/7) * weeklyDurationDays;
+      }
+
+
       if(plan_type == 1 && duration_days>29){
         weeklyFinalRate = weeklyBaseRate*duration_days;
         weekly_drop_date = dateTimeCalculator(is_home_page,plan_type,"weekly",duration_months,pickup,drop,inventory[0].minimumRentalDays,duration_days);
+        if(pai){
+        weeklyCdwRate = ((inventory[0].collision_damage_waiver.weekly || 0)/7) * duration_days;
+        
+
+        }
+        if(cdw){
+          weeklyPaiRate = ((inventory[0].personal_accidental_insurance.weekly || 0)/7) * duration_days;
+        
+        }
+        if(security_deposit){
+          weeklySecurityRate = ((inventory[0].security_deposit_premium.weekly || 0)/7) * duration_days;
+        }
       }
 
       
@@ -832,11 +833,17 @@ export class InventoryService {
         extra_charges,
         delivery_charges,
         collection_charges,
+        weeklyCdwRate,
+        weeklyPaiRate,
+        weeklySecurityRate
       );
       weeklyPlan.pickup = pickup;
       weeklyPlan.drop = weekly_drop_date
       weeklyPlan.tariff_type = 'Weekly';
       weeklyPlan.fare_Details = weekly_fare_details;
+      weeklyPlan.collision_damage_waiver = weeklyCdwRate;
+      weeklyPlan.parsonal_accidental_insurance = weeklyPaiRate;
+      weeklyPlan.security_deposit_premium = weeklySecurityRate;
       inventoryMapping.tarrifs.push(weeklyPlan);
 
       //monthly
@@ -845,6 +852,22 @@ export class InventoryService {
       let monthlyBaseRate = 0;
       let calculatedMonthlyRate = {};
       let selectedMonthlyPlan: any = {};
+
+      let monthlyCdwRate = 0;
+      let monthlyPaiRate = 0;
+      let monthlySecurityRate = 0;
+
+        if(pai){
+        monthlyCdwRate = ((inventory[0].collision_damage_waiver.monthly || 0));
+        
+        }
+        if(cdw){
+          monthlyPaiRate = ((inventory[0].personal_accidental_insurance.monthly || 0));
+        
+        }
+        if(security_deposit){
+          monthlySecurityRate = ((inventory[0].security_deposit_premium.monthly || 0));
+        }
 
       if (!is_home_page) {
         if(plan_type == 1){
@@ -859,6 +882,9 @@ export class InventoryService {
             extra_charges,
             delivery_charges,
             collection_charges,
+            monthlyCdwRate,
+            monthlyPaiRate,
+            monthlySecurityRate
           );
 
         }else{
@@ -876,42 +902,64 @@ export class InventoryService {
             extra_charges,
             delivery_charges,
             collection_charges,
+            monthlyCdwRate,
+            monthlyPaiRate,
+            monthlySecurityRate
           );
         } else if ((duration_days >=90 && duration_days<180) || duration_months == 3) {
           selectedMonthlyPlan = inventory[0].tariff_monthly?.find(
             (plan) => plan.duration === 3,
           );
            let threeMonthDailyPrice = selectedMonthlyPlan?.base/90;
+           monthlyCdwRate = ((monthlyCdwRate/30)*duration_days),
+           monthlyPaiRate = ((monthlyPaiRate/30)*duration_days),
+           monthlySecurityRate = ((monthlySecurityRate/30))*duration_days
           calculatedMonthlyRate = fareDetailsCalculation(
             selectedMonthlyPlan?.base,
             threeMonthDailyPrice*duration_days,
             extra_charges,
             delivery_charges,
             collection_charges,
+            monthlyCdwRate,
+            monthlyPaiRate,
+            monthlySecurityRate
+
           );
         } else if ((duration_days >=180 && duration_days<270) || duration_months == 6) {
           selectedMonthlyPlan = inventory[0].tariff_monthly?.find(
             (plan) => plan.duration === 6,
           );
           let sixMonthDailyPrice = selectedMonthlyPlan?.base/180;
+          monthlyCdwRate = ((monthlyCdwRate/30)*duration_days),
+           monthlyPaiRate = ((monthlyPaiRate/30)*duration_days),
+           monthlySecurityRate = ((monthlySecurityRate/30))*duration_days
           calculatedMonthlyRate = fareDetailsCalculation(
             selectedMonthlyPlan?.base,
             sixMonthDailyPrice*duration_days,
             extra_charges,
             delivery_charges,
             collection_charges,
+            monthlyCdwRate,
+            monthlyPaiRate,
+            monthlySecurityRate
           );
         } else if ((duration_days >=270 && duration_days<360) || duration_months == 9) {
           selectedMonthlyPlan = inventory[0].tariff_monthly?.find(
             (plan) => plan.duration === 9,
           );
           let nineMonthDailyPrice = selectedMonthlyPlan?.base/270;
+          monthlyCdwRate = ((monthlyCdwRate/30)*duration_days),
+           monthlyPaiRate = ((monthlyPaiRate/30)*duration_days),
+           monthlySecurityRate = ((monthlySecurityRate/30))*duration_days
           calculatedMonthlyRate = fareDetailsCalculation(
             selectedMonthlyPlan?.base,
             nineMonthDailyPrice*duration_days,
             extra_charges,
             delivery_charges,
             collection_charges,
+            monthlyCdwRate,
+            monthlyPaiRate,
+            monthlySecurityRate
           );
         }
       }
@@ -925,13 +973,22 @@ export class InventoryService {
           extra_charges,
           delivery_charges,
           collection_charges,
+          monthlyCdwRate,
+          monthlyPaiRate,
+          monthlySecurityRate
         );
       }
+
+
+      
 
       selectedMonthlyPlan.pickup = pickup;
       selectedMonthlyPlan.drop = monthly_drop_date;
       selectedMonthlyPlan.tariff_type = 'Monthly';
       selectedMonthlyPlan.fare_Details = calculatedMonthlyRate;
+      selectedMonthlyPlan.collision_damage_waiver = monthlyCdwRate;
+      selectedMonthlyPlan.parsonal_accidental_insurance = monthlyPaiRate;
+      selectedMonthlyPlan.security_deposit_premium = monthlySecurityRate;
       inventoryMapping.tarrif_selected = is_home_page?"Daily":((duration_days<7 && plan_type == 1)?"Daily":((duration_days>=7 && duration_days<30)||plan_type == 1)?"Weekly":"Monthly"),
       inventoryMapping.tarrifs.push(selectedMonthlyPlan);
 

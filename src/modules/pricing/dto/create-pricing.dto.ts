@@ -46,7 +46,29 @@ class MonthlyTariff {
   hikePercentage: number;
 }
 
-class InsurancePremium {
+class securityDepositPremium {
+  @IsNumber()
+  daily: number;
+
+  @IsNumber()
+  weekly: number;
+
+  @IsNumber()
+  monthly: number;
+}
+
+class collisionDamageWaiver {
+  @IsNumber()
+  daily: number;
+
+  @IsNumber()
+  weekly: number;
+
+  @IsNumber()
+  monthly: number;
+}
+
+class personalAccidentalInsurance {
   @IsNumber()
   daily: number;
 
@@ -97,11 +119,19 @@ export class CreatePricingDto {
   insurance_charge: number;
 
   @ValidateNested()
-  @Type(() => InsurancePremium)
-  insurance_premium_percentage: InsurancePremium;
+  @Type(() => securityDepositPremium)
+  security_deposit_premium: securityDepositPremium;
 
   @IsNumber()
   total_security_deposit: number;
+
+  @ValidateNested()
+  @Type(() => collisionDamageWaiver)
+  collision_damage_waiver: collisionDamageWaiver;
+
+  @ValidateNested()
+  @Type(() => personalAccidentalInsurance)
+  personal_accidental_insurance: personalAccidentalInsurance;
 
   @IsBoolean()
   onDemand: boolean;

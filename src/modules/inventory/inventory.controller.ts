@@ -51,6 +51,9 @@ export class InventoryController {
       delivery_charges:   q.delivery_charges   ?? 0,
       extra_charges:      q.extra_charges      ?? 0,
       is_home_page:       q.is_home_page       ?? false,
+      cdw: q.cdw ?? false,
+      pai: q.pai ?? false,
+      security_deposit: q.security_deposit ?? false,
     };
 
     const response = await this.inventoryService.getSingleInventoryWithPricing(dto);

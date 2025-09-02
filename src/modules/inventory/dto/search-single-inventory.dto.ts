@@ -110,4 +110,19 @@ drop: DateTimeDto;
   @IsBoolean()
   @IsOptional()
   is_home_page?: boolean;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : !!value))
+  @IsBoolean()
+  @IsOptional()
+  cdw?: boolean;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : !!value))
+  @IsBoolean()
+  @IsOptional()
+  pai?: boolean;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value === 'true' : !!value))
+  @IsBoolean()
+  @IsOptional()
+  security_deposit?: boolean;
 }
