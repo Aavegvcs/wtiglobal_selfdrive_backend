@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { CreateDeliveryCollectionRateDto } from "./dto/create-delivery-collection-rates.dto";
 import { DeliveryCollectionRatesService } from "./delivery-collection-rates.service";
+import { GeofenceLatLngDto } from "./schemas/geofence-latlng.dto";
 
 
 @Controller('delivery-collection-rates')
@@ -12,12 +13,9 @@ export class DeliveryCollectionRatesController {
         return this.deliveryCollectionRatesService.createUpdateDeliveryCollectionRates(deliveryCollectionDto)
     }
 
-    @Get('getDeliveryCollectionRatesOnCity/:country/:city')
-    getDeliveryCollectionRatesOnCity(
-        @Param('country') country: string,
-        @Param('city') city: string
-    ){
-        return this.deliveryCollectionRatesService.getDeliveryCollectionRatesOnCity(country, city)
+    @Post('getDeliveryCollectionRates')
+    getDeliveryCollectionRates(@Body() latlng: GeofenceLatLngDto){
+        return this.deliveryCollectionRatesService.getDeliveryCollectionRates(latlng)
     }
 
     @Get('getDeliveryCollectionRatesOnCountry/:country')

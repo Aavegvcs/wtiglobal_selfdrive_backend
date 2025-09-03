@@ -19,11 +19,7 @@ export class CreateDeliveryCollectionRateDto {
 
   @IsNumber()
   @IsNotEmpty()
-  deliveryFee: number; // Flat delivery charge
-
-  @IsNumber()
-  @IsNotEmpty()
-  collectionFee: number; // Flat collection charge
+  rate: number; // Flat delivery/collection charge
 
   @IsString()
   @IsNotEmpty()

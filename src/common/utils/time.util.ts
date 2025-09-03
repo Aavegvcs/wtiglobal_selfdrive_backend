@@ -37,8 +37,11 @@ export function convertUtcToTimezone(
   utcTimestamp: string,
   targetTimezone: string,
 ): string {
+
+  const date = new Date(utcTimestamp);
+  
   let dateTime: string | Array<string> = moment
-    .utc(utcTimestamp)
+    .utc(date)
     .tz(targetTimezone)
     .format('YYYY-MM-DD HH:mm:ss');
   dateTime = dateTime.split(' ');

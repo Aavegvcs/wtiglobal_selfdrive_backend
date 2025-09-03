@@ -30,6 +30,8 @@ import { MailService } from '../mails/mail.service';
 import { SingleInventoryReqRes } from '../inventory/schemas/single-inventory-req-res';
 import mongoose from 'mongoose';
 import { PaymentType } from 'src/common/enums/payment-type.enum';
+import { IncomingReservationDto } from './dto/incoming-reservation.dto';
+import { WhatsappService } from '../whatsapp/whatsapp.service';
 
 const logger = new Logger('ReservationService');
 
@@ -50,6 +52,7 @@ export class ReservationService {
     private singleInventoryReqResModel: Model<SingleInventoryReqRes>,
     private readonly paymentGatewayService: PaymentGatewayService,
     private readonly mailService: MailService,
+    private readonly whatsappService: WhatsappService,
   ) {}
 
   async makeProvisionalReservation(
@@ -241,7 +244,7 @@ export class ReservationService {
     }
   }
 
-  async createProvisionalReservation(reqBody: any): Promise<any> {
+  async createProvisionalReservation(reqBody: IncomingReservationDto): Promise<any> {
     let findInventoryData: any = await this.singleInventoryReqResModel.findById(
       reqBody.reqResId,
     );
@@ -258,7 +261,7 @@ export class ReservationService {
 
     if (tarrifs && tarrifs.length > 0) {
       selectedTarrif = tarrifs.find((item: any) => {
-        return item.tariff_type === findInventoryData.tarrif_selected;
+        return item.tariff_type === reqBody.selectedTarrif;
       });
     }
 
@@ -268,13 +271,10 @@ export class ReservationService {
       selectedTarrif.pickup,
       'Asia/Dubai',
     );
-    let dropDate: string;
-
-    if (selectedTarrif.tariff_type === 'Monthly') {
-      dropDate = addDaysToDate(pickupDate, 30);
-    } else {
-      dropDate = makeTimeStampFromDateTime(selectedTarrif.drop, 'Asia/Dubai');
-    }
+    let dropDate: string = makeTimeStampFromDateTime(
+      selectedTarrif.drop,
+      'Asia/Dubai',
+    );
 
     const daysDiff = calculateDaysDifference(pickupDate, dropDate);
 
@@ -305,7 +305,7 @@ export class ReservationService {
           findInventoryData.source.countryCode.toUpperCase() == 'IND'
             ? '1'
             : '0',
-        user_documents_id: reqBody.user_documents_id,
+        user_documents_id: reqBody.user_documents_id ?? [],
       },
       receipt: {
         baseFare: selectedTarrif.fare_Details.base_fare || 0,
@@ -425,12 +425,12 @@ export class ReservationService {
 
       const confirmationDataPacket = {
         contactCode: provisionalReservation.user_id.contactCode,
-        contact: provisionalReservation.user_id.contact,
+        contact: provisionalReservation.user_id.contact.toString(),
         firstName: provisionalReservation.user_id.firstName,
         emailID: provisionalReservation.user_id.emailID,
         order_reference_number: provisionalReservation.order_reference_number,
-        paymentId: paymentId,
-        extrasSelected: extrasSelected,
+        paymentId: paymentId ?? '',
+        extrasSelected: extrasSelected ?? '',
         reservationStatus: reservationResult.reservationStatus,
         // start_time: convertUtcToTimezone(String(reservation.pickupDate), reservation.timezone),
         pickupDate: convertUtcToTimezone(
@@ -443,28 +443,31 @@ export class ReservationService {
         ),
         pickupLocation: provisionalReservation.pickupLocation,
         dropLocation: provisionalReservation.dropLocation,
-        tarrifType: provisionalReservation.tarrifType,
+        tarrifType: provisionalReservation.tarrifType ?? '',
         vehicle: provisionalReservation.model_name ?? '',
         // carCategoryName: reservation.vehicle_details?.model ?? '',
-        baseFare: (
+        baseFare: Number((
           receiptResult.baseFare * receiptResult.currencyInfo.currencyRate
-        ).toFixed(2),
+        ).toFixed(2)),
         currency: receiptResult.currencyInfo.currency,
         tax: 0,
-        amountPaid: (
+        addOns: 0 * receiptResult.currencyInfo.currencyRate,
+        amountPaid: Number((
           receiptResult.amountPaid * receiptResult.currencyInfo.currencyRate
-        ).toFixed(2),
-        discount: (
+        ).toFixed(2)),
+        discount: Number((
           receiptResult.discount * receiptResult.currencyInfo.currencyRate
-        ).toFixed(2),
-        grandTotal: (
+        ).toFixed(2)),
+        grandTotal: Number((
           receiptResult.totalFare * receiptResult.currencyInfo.currencyRate
-        ).toFixed(2),
+        ).toFixed(2)),
       };
 
       isMailSent = await this.mailService.sendConfirmationEmail(
         confirmationDataPacket,
       );
+
+      isWhatsappSent = await this.whatsappService.sendBookingMessage(confirmationDataPacket);
 
       return standardResponse(
         true,
@@ -598,10 +601,12 @@ export class ReservationService {
             time: `${dDate.split(",")[1].split(":")[0]}:${dDate.split(",")[1].split(":")[1]}`,
           },
           price: {
-            amount: (
-              sortedBookings[i].receipt_ref_id.totalFare *
-              sortedBookings[i].receipt_ref_id.currencyInfo.currencyRate
-            ).toFixed(2),
+            amount: Number(
+              (
+                sortedBookings[i].receipt_ref_id.totalFare *
+                sortedBookings[i].receipt_ref_id.currencyInfo.currencyRate
+              ).toFixed(2)
+            ),
             currency: sortedBookings[i].receipt_ref_id.currencyInfo.currency,
           },
         };

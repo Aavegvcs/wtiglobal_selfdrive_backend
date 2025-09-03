@@ -11,6 +11,7 @@ import { FinalReceipt, FinalReceiptSchema } from './schemas/final-receipt.schema
 import { PaymentGatewayModule } from '../payment-gateway/payment-gateway.module';
 import { MailModule } from '../mails/mail.module';
 import { InventoryModule } from '../inventory/inventory.module';
+import { WhatsappModule } from '../whatsapp/whatsapp.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { InventoryModule } from '../inventory/inventory.module';
     MongooseModule.forFeature([{ name: FinalReceipt.name, schema: FinalReceiptSchema }]),
     PaymentGatewayModule,
     MailModule,
+    WhatsappModule,
     InventoryModule
   ],
   controllers: [ReservationController],

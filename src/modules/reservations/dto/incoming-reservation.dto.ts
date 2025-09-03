@@ -45,4 +45,8 @@ export class IncomingReservationDto {
   @IsString()
   @IsNotEmpty()
   currency: string;
+
+  @IsString()
+  @IsNotEmpty()
+  selectedTarrif: string;
 }

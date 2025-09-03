@@ -13,10 +13,7 @@ export class DeliveryCollectionRate extends Document {
 //   vendorId?: Types.ObjectId;  // optional, if vendor-specific
 
   @Prop({ required: true })
-  deliveryFee: number;   // Flat delivery charge
-
-  @Prop({ required: true })
-  collectionFee: number; // Flat collection charge
+  rate: number; // Flat delivery/collection charge
 
   @Prop({ required: true, uppercase: true, trim: true })
   currency: string;      // e.g., "INR", "GBP", "AED"
