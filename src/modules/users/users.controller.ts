@@ -34,8 +34,8 @@ export class UserController {
     return res.status(response.statusCode).json(response)
   }
 
-  @Get('loginUser/:userCred')
-  async loginUser(@Param('userCred') userCred: string, @Res() res: Response) {
+  @Post('loginUser')
+  async loginUser(@Body() userCred: string, @Res() res: Response) {
     const response = await this.userService.loginUser(userCred);    
     return res.status(response.statusCode).json(response)
   }
