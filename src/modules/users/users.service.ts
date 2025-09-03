@@ -145,20 +145,20 @@ export class UserService {
     }
   }
 
-  async loginUser(userCred: any) {
+  async loginUser(data: any) {
     
     try {
-    logger.log("loginUser - Req.payload", userCred)
+    logger.log("loginUser - Req.payload", data.userCred)
 
     let query = {};
 
-    if (isNaN(userCred)) {
+    if (isNaN(data.userCred)) {
       // Input is likely an email
-      const email = userCred.toString();
+      const email = data.userCred.toString();
       query = { emailID: { $regex: new RegExp(`^${email}$`, 'i') } }
     } else {
       // Input is likely a phone number
-      const contact = Number(userCred);
+      const contact = Number(data.userCred);
       query = { contact }
     }
 
@@ -189,7 +189,7 @@ export class UserService {
       logger.log(
         timeStamp(),
         `- loginUser - user exists and OTP updated`,
-        userCred,
+        data.userCred,
       );
 
         // whatsapp otp
@@ -204,6 +204,7 @@ export class UserService {
         if(isWhatsappOtpSent.success || emailSent){
           return standardResponse(true, 'OTP sent to Email/Whatsapp.', 200,
               {
+                  ...data,
                   isWhatsappOtpSent: isWhatsappOtpSent.success,
                   mailSent: emailSent,
               },
