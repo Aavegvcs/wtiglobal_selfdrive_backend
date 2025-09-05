@@ -426,6 +426,7 @@ export class InventoryService {
 
   async getAllInventoryByCountry(country_id: string): Promise<any> {
     try {
+      console.log("country_id", country_id);
       const inventory = await this.pricingModel
         .find(
           { country_id, isActive: true },

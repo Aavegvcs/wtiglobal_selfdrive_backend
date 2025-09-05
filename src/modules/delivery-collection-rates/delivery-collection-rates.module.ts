@@ -13,6 +13,7 @@ import { ServiceRegions, ServiceRegionsSchema } from './schemas/service-regions.
     ]),
   ],
   providers: [DeliveryCollectionRatesService],
-  controllers: [DeliveryCollectionRatesController]
+  controllers: [DeliveryCollectionRatesController],
+  exports: [DeliveryCollectionRatesService],
 })
 export class DeliveryCollectionRateModule {}

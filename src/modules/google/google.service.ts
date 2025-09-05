@@ -5,6 +5,7 @@ import axios from "axios";
 import { standardResponse } from "src/common/helpers/response.helper";
 import { ExceptionCountry, ExceptionCountryDocument } from "../search-locations/schemas/exception-countries.schema";
 import { Model } from "mongoose";
+import { DeliveryCollectionRatesService } from "../delivery-collection-rates/delivery-collection-rates.service";
 
 
 @Injectable()
@@ -15,6 +16,7 @@ export class GoogleApiService {
     private readonly configService: ConfigService,
     @InjectModel(ExceptionCountry.name)
     private exceptionCountryModel: Model<ExceptionCountryDocument>,
+    private readonly deliveryCollectionRatesService: DeliveryCollectionRatesService,
   ) {
     this.apiKey = this.configService.get<string>('GOOGLE_API_KEY');
   }
@@ -117,6 +119,8 @@ export class GoogleApiService {
     }
   }
 
+
+  // this api is used to fetch lat long from place id and also delivery/collection rates for that location
   async getLatLong(placeId: string): Promise<any> {
     try {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?place_id=${placeId}&key=${this.apiKey}`;
@@ -133,45 +137,43 @@ export class GoogleApiService {
         );
       }
 
-      const addressComponents = response.data.results[0]?.address_components;
-      const locationMap =
-        this.createHashmapFromAddressComponents(addressComponents);
+      const address = response.data.results[0]?.formatted_address;
+      const latlng = response.data.results[0]?.geometry.location;
+      const locationMap = this.createHashmapFromAddressComponents(response.data.results[0]?.address_components);
 
-      let country = locationMap['country'];
-      let state = locationMap['administrative_area_level_1'];
-      let city = this.getCityFromHashmap(locationMap);
+      const country = locationMap['country'];
+      const state = locationMap['administrative_area_level_1'];
+      const city = this.getCityFromHashmap(locationMap);
 
-      if (city && (!state || !country)) {
-        const fetchExceptionCountry = await this.exceptionCountryModel.findOne({
-          city: new RegExp(city, 'i'),
-        })
-          .lean()
-          .exec();
+      const fetchDeliveryCollectionRate: any = await this.deliveryCollectionRatesService.getDeliveryCollectionRates(latlng);
 
-        if (!fetchExceptionCountry) {
-          await this.exceptionCountryModel.create({ city });
-          console.log(
-            'New exception country with null data saved from google api - getLatLongChauffeur',
-          );
-        }
+      console.log("fetchDeliveryCollectionRate", fetchDeliveryCollectionRate);
 
-        state = fetchExceptionCountry?.state;
-        country = fetchExceptionCountry?.country;
-      }
-    
-      return standardResponse(
-        true,
-        'Successfully fetched results from google latlng api',
-        200,
-        {
-          latLong: response.data.results[0].geometry.location,
-          city,
-          state: state ?? city,
-          country: country ?? city,
-        },
-        null,
-        'google/getLatLong',
-      );
+      if (!fetchDeliveryCollectionRate.success) {
+        return standardResponse(
+          false,
+          fetchDeliveryCollectionRate.message,
+          fetchDeliveryCollectionRate.statusCode,
+          null,
+          fetchDeliveryCollectionRate?.error,
+          'google/getLatLong',
+        );
+      } 
+
+        return standardResponse(
+          true,
+          'Successfully fetched results from google latlng api',
+          200,
+          {
+            city: city,
+            address: address,
+            rate: fetchDeliveryCollectionRate.result.rate,
+            latlng: latlng
+          },
+          null,
+          'google/getLatLong',
+        );
+
     } catch (error) {
       return standardResponse(
         false,
