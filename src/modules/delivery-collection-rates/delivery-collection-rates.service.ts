@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectModel } from "@nestjs/mongoose";
 import { DeliveryCollectionRate } from "./schemas/delivery-collection-rates.schema";
 import { Model } from "mongoose";
@@ -16,8 +16,8 @@ export class DeliveryCollectionRatesService {
     private deliveryCollectionRateModel: Model<DeliveryCollectionRate>,
     @InjectModel(ServiceRegions.name)
     private serviceRegionsModel: Model<ServiceRegions>,
-    // @InjectModel(ServiceHub.name)
-    // private serviceHubModel: Model<ServiceHub>,
+    @InjectModel(ServiceHub.name)
+    private serviceHubModel: Model<ServiceHub>,
   ) {}
 
   async createUpdateDeliveryCollectionRates(data: Partial<CreateDeliveryCollectionRateDto>) {
@@ -86,6 +86,41 @@ export class DeliveryCollectionRatesService {
       return standardResponse(true, 'delivery-collection-rates list fetched successfully', 200, result, null, '/delivery-collection-rates/getDeliveryCollectionRates');
     } catch (error) {
       return standardResponse(false, 'Internal Server Error', 500, null, error.stack, '/delivery-collection-rates/getDeliveryCollectionRates');
+    }
+  }
+
+  async getServiceHubByCountryAndCity(countryCode: string, city: string) {
+    try {
+      if (!countryCode || !city) {
+        throw new BadRequestException('Missing required country or city');
+      }
+
+      const hub = await this.serviceHubModel
+        .find({
+          country: { $regex: new RegExp(`^${countryCode}$`, 'i') }, // case-insensitive
+          city: { $regex: new RegExp(`^${city}$`, 'i') },
+        }).select("-createdAt -updatedAt -__v -serviceRegion")
+        .exec();
+
+      if (!hub) throw new NotFoundException('Service hub not found');
+
+      return standardResponse(
+        true,
+        'Successfully fetched service hub',
+        200,
+        hub,
+        null,
+        '/service-hub/getServiceHubByCountryAndCity',
+      );
+    } catch (error) {
+      return standardResponse(
+        false,
+        'Internal Server Error',
+        500,
+        null,
+        error.stack,
+        '/service-hub/getServiceHubByCountryAndCity',
+      );
     }
   }
 

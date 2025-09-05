@@ -4,12 +4,14 @@ import { DeliveryCollectionRate, DeliveryCollectionRateSchema } from './schemas/
 import { DeliveryCollectionRatesService } from './delivery-collection-rates.service';
 import { DeliveryCollectionRatesController } from './delivery-collection-rates.controller';
 import { ServiceRegions, ServiceRegionsSchema } from './schemas/service-regions.schema';
+import { ServiceHub, ServiceHubSchema } from './schemas/service-hub.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: DeliveryCollectionRate.name, schema: DeliveryCollectionRateSchema },
       { name: ServiceRegions.name, schema: ServiceRegionsSchema },
+      { name: ServiceHub.name, schema: ServiceHubSchema },
     ]),
   ],
   providers: [DeliveryCollectionRatesService],

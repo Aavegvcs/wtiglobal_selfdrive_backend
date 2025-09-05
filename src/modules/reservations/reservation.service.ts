@@ -878,4 +878,99 @@ export class ReservationService {
       );
     }
   }
+
+  async getAllFinalReservations(country: string, page = 1, limit = 10) {
+    try {
+    const skip = (page - 1) * limit; // Calculate how many documents to skip
+
+    // Fetch total count of reservations for pagination calculation
+    const totalReservations = await this.finalReservationModel.countDocuments();
+    const totalPages = Math.ceil(totalReservations / limit); // Calculate total number of pages
+
+      const results: any[] = await this.finalReservationModel
+        .find({ country: country })
+        .populate([
+          { path: 'user_id'},
+          { path: 'vehicle_id'},
+          { path: 'extrasSelected'},
+          { path: 'receipt_ref_id' },
+        ])
+        .sort({ createdAt: -1 }) // Sort by latest created
+        .skip(skip) // Skip the required number of documents
+        .limit(limit) // Limit to 10 blogs per page
+        .lean()
+        .exec();
+
+      if (!results.length) throw new NotFoundException('No reservations found');
+
+      const responseData = results.map((reservation) => {
+
+        const {
+          vehicle_id,
+          user_id,
+          receipt_ref_id,
+          pickupLocation,
+          dropLocation,
+          pickupDate,
+          dropDate,
+          timezone,
+          extrasSelected,
+          ...restReservation
+        } = reservation;
+
+        const pDate = convertUtcToTimezone(
+          pickupDate,
+          timezone,
+        );
+        const dDate = convertUtcToTimezone(
+          dropDate,
+          timezone,
+        );
+
+
+        return {
+          ...restReservation,
+          vehicle: vehicle_id,
+          user: user_id,
+          receipt: receipt_ref_id,
+          pickup: {
+            title: 'Pickup',
+            address: pickupLocation,
+            date: pDate.split(',')[0],
+            time: `${pDate.split(',')[1].split(':')[0]}:${pDate.split(',')[1].split(':')[1]}`,
+          },
+          drop: {
+            title: 'Drop Off',
+            address: dropLocation,
+            date: dDate.split(',')[0],
+            time: `${dDate.split(',')[1].split(':')[0]}:${dDate.split(',')[1].split(':')[1]}`,
+          },
+          extras: extrasSelected || [],
+        };
+      });
+
+      return standardResponse(
+        true,
+        'Successfully fetched all reservations',
+        200,
+        {
+          bookings: responseData,
+          totalPages: totalPages,
+          currentPage: page,
+          totalReservations: totalReservations,
+        },
+        null,
+        '/reservation/getAllFinalReservations',
+      );
+    } catch (error) {
+      return standardResponse(
+        false,
+        'Internal Server Error',
+        500,
+        null,
+        error.stack,
+        '/reservation/getAllFinalReservations',
+      );
+    }
+  }
 }
