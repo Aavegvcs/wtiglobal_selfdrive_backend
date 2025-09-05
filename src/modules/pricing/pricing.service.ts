@@ -121,7 +121,7 @@ export class PricingService {
   async getSingleVehiclePricing(id: string): Promise<any> {
     try {
       const pricing = await this.pricingModel
-        .findOne({ _id: id, isActive: true })
+        .findOne({ vehicle_id: id, isActive: true })
         .exec();
 
       if (!pricing) {
